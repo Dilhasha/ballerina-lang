@@ -220,3 +220,5 @@ buildCache {
         push = true
     }
 }
+include 'misc:testerina:modules:static-test-analyzer'
+findProject(':misc:testerina:modules:static-test-analyzer')?.name = 'org.ballerinalang.ballerina-parent.testerina.static-test-analyzer'
