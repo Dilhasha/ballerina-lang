@@ -1,0 +1,21 @@
+apply from: "$rootDir/gradle/javaProject.gradle"
+
+description = 'Compiler Plugin - Static test analyzer plugin'
+version = '1.0.0'
+
+dependencies {
+    implementation project(':ballerina-lang')
+    implementation project(':ballerina-parser')
+    implementation project(':ballerina-tools-api')
+}
+
+ext.moduleName = 'io.ballerina.test.analyzer'
+
+compileJava {
+    doFirst {
+        options.compilerArgs = [
+                '--module-path', classpath.asPath,
+        ]
+        classpath = files()
+    }
+}

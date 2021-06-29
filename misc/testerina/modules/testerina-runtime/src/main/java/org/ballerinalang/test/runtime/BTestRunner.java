@@ -270,15 +270,15 @@ public class BTestRunner {
         // This will init and start the test module.
         startSuite(suite, initScheduler, initClazz, testInitClazz, configClazz, hasTestablePackage);
         // Run Before suite functions
-        executeBeforeSuiteFunctions(suite, classLoader, scheduler, shouldSkip, shouldSkipAfterSuite);
-        // Run Tests
-        executeTests(suite, packageName, classLoader, scheduler, shouldSkip, shouldSkipAfterGroups);
-        // Run After suite functions
-        executeAfterSuiteFunctions(suite, classLoader, scheduler, shouldSkipAfterSuite);
-        // Call module stop and test stop function
-        stopSuite(scheduler, initClazz, testInitClazz, hasTestablePackage);
-        // print module test results
-        tReport.printTestSuiteSummary(packageName);
+//        executeBeforeSuiteFunctions(suite, classLoader, scheduler, shouldSkip, shouldSkipAfterSuite);
+//        // Run Tests
+//        executeTests(suite, packageName, classLoader, scheduler, shouldSkip, shouldSkipAfterGroups);
+//        // Run After suite functions
+//        executeAfterSuiteFunctions(suite, classLoader, scheduler, shouldSkipAfterSuite);
+//        // Call module stop and test stop function
+//        stopSuite(scheduler, initClazz, testInitClazz, hasTestablePackage);
+//        // print module test results
+//        tReport.printTestSuiteSummary(packageName);
     }
 
     private void startSuite(TestSuite suite, Scheduler initScheduler, Class<?> initClazz, Class<?> testInitClazz,
