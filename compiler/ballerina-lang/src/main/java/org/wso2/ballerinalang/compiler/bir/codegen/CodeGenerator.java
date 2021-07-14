@@ -66,14 +66,14 @@ public class CodeGenerator {
 
     public CompiledJarFile generate(BLangPackage bLangPackage) {
         // generate module
-        return generate(bLangPackage.symbol);
+        return generate(bLangPackage.symbol, false);
     }
 
     public CompiledJarFile generateTestModule(BLangPackage bLangTestablePackage) {
-        return generate(bLangTestablePackage.symbol);
+        return generate(bLangTestablePackage.symbol, true);
     }
 
-    private CompiledJarFile generate(BPackageSymbol packageSymbol) {
+    private CompiledJarFile generate(BPackageSymbol packageSymbol, boolean isTest) {
 
         // Desugar BIR to include the observations
         JvmObservabilityGen jvmObservabilityGen = new JvmObservabilityGen(packageCache, symbolTable);
@@ -89,7 +89,7 @@ public class CodeGenerator {
                 .encodeModuleIdentifiers(packageSymbol.bir, Names.getInstance(this.compilerContext));
 
         // TODO Get-rid of the following assignment
-        packageSymbol.compiledJarFile = jvmPackageGen.generate(packageSymbol.bir, true);
+        packageSymbol.compiledJarFile = jvmPackageGen.generate(packageSymbol.bir, true, isTest);
 
         //Revert encoding identifier names
         JvmDesugarPhase.replaceEncodedModuleIdentifiers(packageSymbol.bir, Names.getInstance(this.compilerContext),

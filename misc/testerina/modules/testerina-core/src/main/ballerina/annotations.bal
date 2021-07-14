@@ -14,6 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+public type InitConfig record {
+    boolean enable = true;
+};
+
 # Configuration set for test functions.
 #
 # + enable - Flag to enable/disable test functions
@@ -51,6 +55,8 @@ public type BeforeGroupsConfig record {
 public type AfterGroupsConfig record {
     string[] value = [];
 };
+
+public annotation InitConfig Init on function;
 
 public annotation TestConfig Config on function;
 

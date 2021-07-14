@@ -19,7 +19,7 @@ import java.util.List;
 public class InitFunctionVisitor extends NodeVisitor {
 
     private static final String INIT_ANNOTATION_NAME = "Init";
-    private static final String TEST_MODULE_NAME = "dtest";
+    private static final String TEST_MODULE_NAME = "test";
 
     private final List<FunctionDefinitionNode> functions;
 

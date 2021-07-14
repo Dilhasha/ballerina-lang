@@ -21,6 +21,8 @@ import io.ballerina.cli.BLauncherCmd;
 import io.ballerina.cli.TaskExecutor;
 import io.ballerina.cli.task.CleanTargetDirTask;
 import io.ballerina.cli.task.CompileTask;
+import io.ballerina.cli.task.CreateExecutableTask;
+import io.ballerina.cli.task.CreateTestExecutableTask;
 import io.ballerina.cli.task.ListTestGroupsTask;
 import io.ballerina.cli.task.ResolveMavenDependenciesTask;
 import io.ballerina.cli.task.RunTestsTask;
@@ -204,8 +206,9 @@ public class TestCommand implements BLauncherCmd {
                 .addTask(new CompileTask(outStream, errStream)) // compile the modules
 //                .addTask(new CopyResourcesTask(), listGroups) // merged with CreateJarTask
                 .addTask(new ListTestGroupsTask(outStream), !listGroups) // list available test groups
-                .addTask(new RunTestsTask(outStream, errStream, rerunTests, groupList, disableGroupList,
-                        testList, includes, coverageFormat), listGroups)
+                .addTask(new CreateTestExecutableTask(outStream, null))
+//                .addTask(new RunTestsTask(outStream, errStream, rerunTests, groupList, disableGroupList,
+//                        testList, includes, coverageFormat), listGroups)
                 .build();
 
         taskExecutor.executeTasks(project);

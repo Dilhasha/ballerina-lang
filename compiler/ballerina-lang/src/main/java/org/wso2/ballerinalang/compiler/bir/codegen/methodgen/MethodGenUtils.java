@@ -52,6 +52,9 @@ public class MethodGenUtils {
     static final String INIT_FUNCTION_SUFFIX = ".<init>";
     static final String STOP_FUNCTION_SUFFIX = ".<stop>";
     static final String START_FUNCTION_SUFFIX = ".<start>";
+    static final String TEST_INIT_FUNCTION_SUFFIX = ".<testinit>";
+    static final String TEST_START_FUNCTION_SUFFIX = ".<teststart>";
+    static final String TEST_STOP_FUNCTION_SUFFIX = ".<teststop>";
 
     static boolean hasInitFunction(BIRNode.BIRPackage pkg) {
         for (BIRNode.BIRFunction func : pkg.functions) {
@@ -62,8 +65,21 @@ public class MethodGenUtils {
         return false;
     }
 
+    static boolean hasTestInitFunction(BIRNode.BIRPackage pkg) {
+        for (BIRNode.BIRFunction func : pkg.functions) {
+            if (func != null && isTestInitFunction(func)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static boolean isModuleInitFunction(BIRNode.BIRFunction func) {
         return func.name.value.equals(encodeModuleSpecialFuncName(INIT_FUNCTION_SUFFIX));
+    }
+
+    static boolean isTestInitFunction(BIRNode.BIRFunction func) {
+        return func.name.value.equals(encodeModuleSpecialFuncName(TEST_INIT_FUNCTION_SUFFIX));
     }
 
     static void submitToScheduler(MethodVisitor mv, String moduleClassName,

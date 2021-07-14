@@ -1,6 +1,6 @@
-module io.ballerina.test.analyzer {
+module io.ballerina.testerina.testanalyzer {
+        exports org.ballerinalang.testerina.plugins;
         requires io.ballerina.lang;
         requires io.ballerina.parser;
         requires io.ballerina.tools.api;
-        exports org.ballerinalang.testerina.plugins;
 }

@@ -239,6 +239,11 @@ public class ProjectUtils {
         return pkg.packageName().toString() + BLANG_COMPILED_JAR_EXT;
     }
 
+    public static String getTestExecutableName(Package pkg) {
+        // <packagename>.jar
+        return pkg.packageName().toString() + "_test" + BLANG_COMPILED_JAR_EXT;
+    }
+
     public static String getOrgFromBalaName(String balaName) {
         return balaName.split("-")[0];
     }

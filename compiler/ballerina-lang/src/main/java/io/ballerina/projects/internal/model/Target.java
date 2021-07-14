@@ -122,6 +122,20 @@ public class Target {
     }
 
     /**
+     * Returns the path of the test executable jar.
+     *
+     * @param pkg Package instance
+     * @return the path of the test executable
+     */
+    public Path getTestExecutablePath(Package pkg) throws IOException {
+        if (outputPath != null) {
+            return outputPath;
+        }
+        return getBinPath().resolve(ProjectUtils.getTestExecutableName(pkg));
+    }
+
+
+    /**
      * Returns the bin directory path.
      *
      * @return bin path

@@ -403,10 +403,35 @@ public class JvmPackageGen {
         return userMainFunc;
     }
 
+    private BIRFunction getTestInitFunc(List<BIRFunction> funcs) {
+        BIRFunction userMainFunc = null;
+        for (BIRFunction func : funcs) {
+            if (func != null && func.name.value.equals("$gen$$0046$0060testinit$0062")) {
+                userMainFunc = func;
+                break;
+            }
+        }
+
+        return userMainFunc;
+    }
+
+    private BIRFunction getTestExecFunc(List<BIRFunction> funcs) {
+        BIRFunction userMainFunc = null;
+        for (BIRFunction func : funcs) {
+            if (func != null && func.name.value.equals("testExecute")) {
+                userMainFunc = func;
+                break;
+            }
+        }
+
+        return userMainFunc;
+    }
+
+
     private void generateModuleClasses(BIRPackage module, Map<String, byte[]> jarEntries,
-                                       String moduleInitClass, JvmBStringConstantsGen stringConstantsGen,
+                                       String moduleInitClass, String testInitClass, JvmBStringConstantsGen stringConstantsGen,
                                        Map<String, JavaClass> jvmClassMapping, List<PackageID> moduleImports,
-                                       boolean serviceEPAvailable) {
+                                       boolean serviceEPAvailable, boolean isTest) {
         jvmClassMapping.entrySet().parallelStream().forEach(entry -> {
             String moduleClass = entry.getKey();
             JavaClass javaClass = entry.getValue();
@@ -439,9 +464,23 @@ public class JvmPackageGen {
 
                 MainMethodGen mainMethodGen = new MainMethodGen(symbolTable, jvmTypeGen, jvmCastGen,
                                                                 asyncDataCollector);
-                mainMethodGen.generateMainMethod(mainFunc, cw, module, moduleClass, serviceEPAvailable);
+                if (isTest) {
+                    BIRFunction testInitFunc = getTestInitFunc(module.functions);
+                    BIRFunction testExecFunc = getTestExecFunc(module.functions);
+                    mainMethodGen.generateTestMainMethod(testExecFunc, cw, module, moduleClass, testInitClass, serviceEPAvailable);
+                    if (testInitFunc != null) {
+                        mainMethodGen.generateLambdaForFunc(testInitFunc, cw, testInitClass, "$lambda$$gen$$0046$0060testinit$0062$");
+                    }
+                    if (testExecFunc != null) {
+                        String testExecClass = getModuleLevelClassName(module.packageID, JvmCodeGenUtil
+                                .cleanupPathSeparators(testExecFunc.pos.lineRange().filePath()));
+                        mainMethodGen.generateLambdaForFunc(testExecFunc, cw, testExecClass, "$lambda$testExecute$");
+                    }
+                } else {
+                    mainMethodGen.generateMainMethod(mainFunc, cw, module, moduleClass, serviceEPAvailable);
+                }
                 if (mainFunc != null) {
-                    mainMethodGen.generateLambdaForMain(mainFunc, cw, mainClass);
+                    mainMethodGen.generateLambdaForFunc(mainFunc, cw, mainClass, "$lambda$main$");
                 }
                 initMethodGen.generateLambdaForPackageInits(cw, module, moduleClass, moduleImports, jvmCastGen);
 
@@ -738,7 +777,7 @@ public class JvmPackageGen {
 
     private void generateDependencyList(BPackageSymbol packageSymbol) {
         if (packageSymbol.bir != null) {
-            generate(packageSymbol.bir, false);
+            generate(packageSymbol.bir, false, false);
         } else {
             for (BPackageSymbol importPkgSymbol : packageSymbol.imports) {
                 if (importPkgSymbol == null) {
@@ -750,7 +789,7 @@ public class JvmPackageGen {
         dependentModules.add(packageSymbol.pkgID);
     }
 
-    CompiledJarFile generate(BIRNode.BIRPackage module, boolean isEntry) {
+    CompiledJarFile generate(BIRNode.BIRPackage module, boolean isEntry, boolean isTest) {
         Set<PackageID> moduleImports = new LinkedHashSet<>();
         addBuiltinImports(module.packageID, moduleImports);
         boolean serviceEPAvailable = module.isListenerAvailable;
@@ -801,8 +840,14 @@ public class JvmPackageGen {
         frameClassGen.generateFrameClasses(module, jarEntries);
 
         // generate module classes
-        generateModuleClasses(module, jarEntries, moduleInitClass, stringConstantsGen, jvmClassMapping,
-                              flattenedModuleImports, serviceEPAvailable);
+        if (isTest) {
+            String testInitClass = JvmCodeGenUtil.getModuleLevelClassName(module.packageID, module.packageID.name.getValue());
+            generateModuleClasses(module, jarEntries, moduleInitClass, testInitClass, stringConstantsGen, jvmClassMapping,
+                    flattenedModuleImports, serviceEPAvailable, true);
+        } else {
+            generateModuleClasses(module, jarEntries, moduleInitClass, null, stringConstantsGen, jvmClassMapping,
+                    flattenedModuleImports, serviceEPAvailable, false);
+        }
         stringConstantsGen.generateConstantInit(jarEntries);
 
         // clear class name mappings

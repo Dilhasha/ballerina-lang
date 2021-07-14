@@ -62,7 +62,9 @@ include(':docerina')
 include(':ballerina-formatter')
 include(':ballerinalang-data-mapper')
 include(':testerina:testerina-core')
+include(':testerina:static-test-analyzer')
 include(':testerina')
+include(':testerina:static-test-analyzer')
 include(':testerina:report-tools')
 include(':testerina:testerina-runtime')
 include(':testerina:testerina-core')
@@ -181,6 +183,7 @@ project(':ballerinalang-data-mapper').projectDir = file('misc/ballerinalang-data
 project(':docerina-gradle-plugin').projectDir = file('misc/ballerina-gradle-plugins/docerina-gradle-plugin')
 project(':docerina').projectDir = file('misc/docerina')
 project(':testerina:testerina-core').projectDir = file('misc/testerina/modules/testerina-core')
+project(':testerina:static-test-analyzer').projectDir = file('misc/testerina/modules/static-test-analyzer')
 project(':testerina').projectDir = file('misc/testerina')
 project(':ballerina-spec-conformance-tests').projectDir = file('tests/ballerina-spec-conformance-tests')
 project(':observability-symbol-collector').projectDir = file('misc/observability-symbol-collector')
@@ -220,5 +223,3 @@ buildCache {
         push = true
     }
 }
-include 'misc:testerina:modules:static-test-analyzer'
-findProject(':misc:testerina:modules:static-test-analyzer')?.name = 'org.ballerinalang.ballerina-parent.testerina.static-test-analyzer'

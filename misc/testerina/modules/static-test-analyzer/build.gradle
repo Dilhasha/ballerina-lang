@@ -1,7 +1,7 @@
 apply from: "$rootDir/gradle/javaProject.gradle"
 
 description = 'Compiler Plugin - Static test analyzer plugin'
-version = '1.0.0'
+version = '0.1.0'
 
 dependencies {
     implementation project(':ballerina-lang')
@@ -9,7 +9,7 @@ dependencies {
     implementation project(':ballerina-tools-api')
 }
 
-ext.moduleName = 'io.ballerina.test.analyzer'
+ext.moduleName = 'io.ballerina.testerina.testanalyzer'
 
 compileJava {
     doFirst {

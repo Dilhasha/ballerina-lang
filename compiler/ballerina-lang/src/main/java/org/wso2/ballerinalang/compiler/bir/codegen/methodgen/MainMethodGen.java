@@ -75,6 +75,8 @@ import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.TOML_DETA
  */
 public class MainMethodGen {
 
+    public static final String TEST_INIT_FUTURE_VAR = "testInitFutureVar";
+    public static final String TEST_EXEC_FUTURE_VAR = "testExecFutureVar";
     public static final String INIT_FUTURE_VAR = "initFutureVar";
     public static final String START_FUTURE_VAR = "startFutureVar";
     public static final String MAIN_FUTURE_VAR = "mainFutureVar";
@@ -150,6 +152,61 @@ public class MainMethodGen {
         mv.visitEnd();
     }
 
+    public void generateTestMainMethod(BIRNode.BIRFunction testExec, ClassWriter cw, BIRNode.BIRPackage pkg,
+                                   String initClass, String testInitClass, boolean serviceEPAvailable) {
+
+        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null,
+                null);
+        mv.visitCode();
+        Label tryCatchStart = new Label();
+        Label tryCatchEnd = new Label();
+        Label tryCatchHandle = new Label();
+        mv.visitTryCatchBlock(tryCatchStart, tryCatchEnd, tryCatchHandle, JvmConstants.THROWABLE);
+        mv.visitLabel(tryCatchStart);
+
+        // check for java compatibility
+        generateJavaCompatibilityCheck(mv);
+
+        invokeConfigInit(mv, pkg.packageID);
+        // start all listeners
+        startListeners(mv, serviceEPAvailable);
+
+        genInitScheduler(mv);
+        // register a shutdown hook to call package stop() method.
+        genShutdownHook(mv, initClass);
+
+
+        boolean hasInitFunction = MethodGenUtils.hasInitFunction(pkg);
+        if (hasInitFunction) {
+            generateMethodCall(initClass, mv, JvmConstants.MODULE_INIT,
+                    MethodGenUtils.INIT_FUNCTION_SUFFIX, INIT_FUTURE_VAR);
+        }
+        boolean hasTestInitFunction = MethodGenUtils.hasTestInitFunction(pkg);
+        if(hasTestInitFunction){
+            generateMethodCall(initClass, mv, JvmConstants.TEST_INIT,
+                    MethodGenUtils.TEST_INIT_FUNCTION_SUFFIX, TEST_INIT_FUTURE_VAR);
+        }
+        if (testExec != null) {
+            generateTestExecFunctionCall(testExec, initClass, mv);
+        }
+        if (hasInitFunction) {
+            generateMethodCall(initClass, mv, JvmConstants.MODULE_START, "start", START_FUTURE_VAR);
+            setListenerFound(mv, serviceEPAvailable);
+        }
+        stopListeners(mv, serviceEPAvailable);
+        if (!serviceEPAvailable) {
+            generateExitRuntime(mv);
+        }
+
+        mv.visitLabel(tryCatchEnd);
+        mv.visitInsn(RETURN);
+        mv.visitLabel(tryCatchHandle);
+        mv.visitMethodInsn(INVOKESTATIC, JvmConstants.RUNTIME_UTILS, JvmConstants.HANDLE_ALL_THROWABLE_METHOD,
+                String.format("(L%s;)V", JvmConstants.THROWABLE), false);
+        mv.visitInsn(RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
     private void generateMethodCall(String initClass, MethodVisitor mv,
                                     String lambdaName, String funcName, String futureVar) {
         mv.visitVarInsn(ALOAD, indexMap.get(SCHEDULER_VAR));
@@ -247,6 +304,21 @@ public class MainMethodGen {
         boolean isVoidFunction = userMainFunc.type.retType.tag == TypeTags.NIL;
         if (!isVoidFunction) {
             genReturn(mv, indexMap, MAIN_FUTURE_VAR);
+        }
+    }
+
+    private void generateTestExecFunctionCall(BIRNode.BIRFunction testExecFunc, String initClass, MethodVisitor mv) {
+        int schedulerVarIndex = indexMap.get(SCHEDULER_VAR);
+        mv.visitVarInsn(ALOAD, schedulerVarIndex);
+        loadCLIArgsForMain(mv, new ArrayList<>(testExecFunc.parameters.keySet()), testExecFunc.annotAttachments);
+
+        // invoke the user's main method
+        genSubmitToScheduler(initClass, mv, "$lambda$testExecute$", "testExecute", TEST_EXEC_FUTURE_VAR);
+        handleErrorFromFutureValue(mv, TEST_EXEC_FUTURE_VAR);
+        // At this point we are done executing all the functions including asyncs
+        boolean isVoidFunction = testExecFunc.type.retType.tag == TypeTags.NIL;
+        if (!isVoidFunction) {
+            genReturn(mv, indexMap, TEST_EXEC_FUTURE_VAR);
         }
     }
 
@@ -413,10 +485,10 @@ public class MainMethodGen {
      * @param cw           class visitor
      * @param mainClass    main class that contains the user main
      */
-    public void generateLambdaForMain(BIRNode.BIRFunction userMainFunc, ClassWriter cw, String mainClass) {
+    public void generateLambdaForFunc(BIRNode.BIRFunction userMainFunc, ClassWriter cw, String mainClass, String lambdaName) {
         BType returnType = userMainFunc.type.retType;
 
-        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC + ACC_STATIC, "$lambda$main$",
+        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC + ACC_STATIC, lambdaName,
                                           String.format("([L%s;)L%s;", JvmConstants.OBJECT, JvmConstants.OBJECT), null,
                                           null);
         mv.visitCode();
@@ -444,4 +516,5 @@ public class MainMethodGen {
         jvmCastGen.addBoxInsn(mv, returnType);
         MethodGenUtils.visitReturn(mv);
     }
+
 }
