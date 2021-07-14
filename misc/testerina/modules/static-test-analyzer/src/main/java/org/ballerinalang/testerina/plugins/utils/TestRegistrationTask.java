@@ -55,6 +55,7 @@ public class TestRegistrationTask implements AnalysisTask<CompilationAnalysisCon
     public static final String TEST_REGISTRATION_FUNCTION = "registerTest";
     public static final String TEST_ORG_NAME = "ballerina";
     public static final String TEST_MODULE_NAME = "test";
+    public static final String TEST_EXEC_FUNCTION = "__testExecute__";
 
     @Override
     public void perform(CompilationAnalysisContext compilationAnalysisContext) {
@@ -167,62 +168,6 @@ public class TestRegistrationTask implements AnalysisTask<CompilationAnalysisCon
         return functionCallStatement;
     }
 
-
-//    private static FunctionDefinitionNode createInitFunction() {
-//        // Function signature
-//        OptionalTypeDescriptorNode optionalErrorTypeDescriptorNode =
-//                NodeFactory.createOptionalTypeDescriptorNode(
-//                        NodeFactory.createParameterizedTypeDescriptorNode(
-//                                SyntaxKind.ERROR_TYPE_DESC, NodeFactory.createToken(SyntaxKind.ERROR_KEYWORD), null),
-//                        NodeFactory.createToken(SyntaxKind.QUESTION_MARK_TOKEN, NodeFactory.createEmptyMinutiaeList(),
-//                                NodeFactory.createMinutiaeList(NodeFactory.createWhitespaceMinutiae(" "))));
-//
-//        ReturnTypeDescriptorNode returnTypeDescriptorNode =
-//                NodeFactory.createReturnTypeDescriptorNode(NodeFactory
-//                                .createToken(SyntaxKind.RETURNS_KEYWORD, NodeFactory.createMinutiaeList(
-//                                        NodeFactory.createWhitespaceMinutiae(" ")),
-//                                        NodeFactory.createMinutiaeList(NodeFactory.createWhitespaceMinutiae(" "))),
-//                        NodeFactory.createEmptyNodeList(), optionalErrorTypeDescriptorNode);
-//        FunctionSignatureNode functionSignatureNode =
-//                NodeFactory.createFunctionSignatureNode(NodeFactory.createToken(SyntaxKind.OPEN_PAREN_TOKEN),
-//                        NodeFactory.createSeparatedNodeList(),
-//                        NodeFactory.createToken(SyntaxKind.CLOSE_PAREN_TOKEN), returnTypeDescriptorNode);
-//
-//        //Function body
-//        SimpleNameReferenceNode simpleNameReferenceNode =
-//                NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken("testExecute"));
-//        SeparatedNodeList<FunctionArgumentNode> separatedNodeList = getFunctionParamList(new PositionalArgumentNode[0]);
-//        ExpressionNode expressionNode = NodeFactory.createFunctionCallExpressionNode(simpleNameReferenceNode,
-//                NodeFactory.createToken(SyntaxKind.OPEN_PAREN_TOKEN), separatedNodeList,
-//                NodeFactory.createToken(SyntaxKind.CLOSE_PAREN_TOKEN));
-//
-//        NilTypeDescriptorNode nilTypeDescriptorNode =
-//                NodeFactory.createNilTypeDescriptorNode(NodeFactory.createToken(SyntaxKind.OPEN_PAREN_TOKEN),
-//                        NodeFactory.createToken(SyntaxKind.CLOSE_PAREN_TOKEN, NodeFactory.createEmptyMinutiaeList(),
-//                                NodeFactory.createMinutiaeList(NodeFactory.createWhitespaceMinutiae(" "))));
-//        StatementNode functionCallStatement =
-//                getFunctionCallStatement("v", nilTypeDescriptorNode, expressionNode, true);
-//
-//        List<StatementNode> statements = new ArrayList<>();
-//        statements.add(functionCallStatement);
-//
-//        FunctionBodyBlockNode functionBodyNode =
-//                NodeFactory.createFunctionBodyBlockNode(
-//                        NodeFactory.createToken(SyntaxKind.OPEN_BRACE_TOKEN, NodeFactory.createEmptyMinutiaeList(),
-//                                NodeFactory.createMinutiaeList(NodeFactory.createWhitespaceMinutiae("\n"))),
-//                        null,
-//                        NodeFactory.createNodeList(statements.toArray(new StatementNode[0])),
-//                        NodeFactory.createToken(SyntaxKind.CLOSE_BRACE_TOKEN));
-//        return NodeFactory.createFunctionDefinitionNode(
-//                SyntaxKind.FUNCTION_DEFINITION, null,
-//                NodeFactory.createEmptyNodeList(),
-//                NodeFactory.createToken(SyntaxKind.FUNCTION_KEYWORD, NodeFactory.createEmptyMinutiaeList(),
-//                        NodeFactory.createMinutiaeList(NodeFactory.createWhitespaceMinutiae(" "))),
-//                NodeFactory.createIdentifierToken("init",
-//                        NodeFactory.createEmptyMinutiaeList(), NodeFactory.createMinutiaeList()),
-//                NodeFactory.createEmptyNodeList(), functionSignatureNode, functionBodyNode);
-//    }
-
     private static VariableDeclarationNode createNewObject(String packageName, String className,
                                                            String varName, ParenthesizedArgList args) {
         QualifiedNameReferenceNode type =
@@ -321,7 +266,7 @@ public class TestRegistrationTask implements AnalysisTask<CompilationAnalysisCon
                 NodeFactory.createEmptyNodeList(),
                 NodeFactory.createToken(SyntaxKind.FUNCTION_KEYWORD, NodeFactory.createEmptyMinutiaeList(),
                         NodeFactory.createMinutiaeList(NodeFactory.createWhitespaceMinutiae(" "))),
-                NodeFactory.createIdentifierToken("testExecute",
+                NodeFactory.createIdentifierToken(TEST_EXEC_FUNCTION,
                         NodeFactory.createEmptyMinutiaeList(), NodeFactory.createMinutiaeList()),
                 NodeFactory.createEmptyNodeList(), getFunctionSignature(), functionBodyNode);
     }

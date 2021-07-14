@@ -66,6 +66,7 @@ import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.LAUNCH_UT
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.OBJECT;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.PATH;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.STRING_VALUE;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.TEST_EXEC_FUNCTION;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.TOML_DETAILS;
 
 /**
@@ -313,7 +314,7 @@ public class MainMethodGen {
         loadCLIArgsForMain(mv, new ArrayList<>(testExecFunc.parameters.keySet()), testExecFunc.annotAttachments);
 
         // invoke the user's main method
-        genSubmitToScheduler(initClass, mv, "$lambda$testExecute$", "testExecute", TEST_EXEC_FUTURE_VAR);
+        genSubmitToScheduler(initClass, mv, "$lambda$" + TEST_EXEC_FUNCTION + "$", TEST_EXEC_FUNCTION, TEST_EXEC_FUTURE_VAR);
         handleErrorFromFutureValue(mv, TEST_EXEC_FUTURE_VAR);
         // At this point we are done executing all the functions including asyncs
         boolean isVoidFunction = testExecFunc.type.retType.tag == TypeTags.NIL;

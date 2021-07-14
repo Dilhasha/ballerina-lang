@@ -106,6 +106,7 @@ import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MODULE_ST
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.OBJECT;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.SERVICE_EP_AVAILABLE;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.STRING_VALUE;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.TEST_EXEC_FUNCTION;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.VALUE_CREATOR;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmDesugarPhase.addDefaultableBooleanVarsToSignature;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmDesugarPhase.rewriteRecordInits;
@@ -418,7 +419,7 @@ public class JvmPackageGen {
     private BIRFunction getTestExecFunc(List<BIRFunction> funcs) {
         BIRFunction userMainFunc = null;
         for (BIRFunction func : funcs) {
-            if (func != null && func.name.value.equals("testExecute")) {
+            if (func != null && func.name.value.equals(TEST_EXEC_FUNCTION)) {
                 userMainFunc = func;
                 break;
             }
@@ -474,7 +475,7 @@ public class JvmPackageGen {
                     if (testExecFunc != null) {
                         String testExecClass = getModuleLevelClassName(module.packageID, JvmCodeGenUtil
                                 .cleanupPathSeparators(testExecFunc.pos.lineRange().filePath()));
-                        mainMethodGen.generateLambdaForFunc(testExecFunc, cw, testExecClass, "$lambda$testExecute$");
+                        mainMethodGen.generateLambdaForFunc(testExecFunc, cw, testExecClass, "$lambda$" + TEST_EXEC_FUNCTION + "$");
                     }
                 } else {
                     mainMethodGen.generateMainMethod(mainFunc, cw, module, moduleClass, serviceEPAvailable);

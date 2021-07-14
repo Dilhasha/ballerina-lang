@@ -78,42 +78,6 @@ public class CreateTestExecutableTask implements Task {
         }
 
         try {
-            // Temp fix- Change the compilation for test execution
-//            Package currentPackage = project.currentPackage();
-//            Module module = currentPackage.getDefaultModule();
-//            for (DocumentId testDocId:module.testDocumentIds()) {
-//                DocumentConfig documentConfig = generateDocument(currentPackage.project(), module,module.document(testDocId));
-//                module = module.modify().removeDocument(testDocId).apply();
-//                module = module.modify().addDocument(documentConfig).apply();
-//            }
-//            for (DocumentId docId:module.documentIds()) {
-//                Document doc = module.document(docId);
-//                if(doc.name().equals("main.bal")){
-//                    DocumentConfig documentConfig = generateMainDocument(currentPackage.project(), module,doc);
-//                    module = module.modify().removeDocument(docId).apply();
-//                    module = module.modify().addDocument(documentConfig).apply();
-//                }
-//            }
-//            List<DocumentConfig> srcDocs = new ArrayList<>();
-//            List<DocumentConfig> testDocs = new ArrayList<>();
-//            for (DocumentId docId:module.documentIds()) {
-//                srcDocs.add(DocumentConfig.from(docId,
-//                        module.document(docId).textDocument().toString(),module.document(docId).name()));
-//            }
-//            for (DocumentId docId:module.testDocumentIds()) {
-//                testDocs.add(DocumentConfig.from(docId,
-//                        module.document(docId).textDocument().toString(),module.document(docId).name()));
-//            }
-//            PackageManifest pkgManifest = currentPackage.manifest();
-//            List<ModuleDescriptor> descriptors = new ArrayList<>();
-//            for (Module moduleIns: currentPackage.modules()) {
-//                ModuleDescriptor moduleDesc = ModuleDescriptor.from(moduleIns.moduleName(), pkgManifest.descriptor());
-//                descriptors.add(moduleDesc);
-//            }
-//            ModuleConfig newModuleConfig = ModuleConfig.from(module.moduleId(), module.descriptor(), srcDocs,
-//                    testDocs, null, descriptors);
-//            Package packageIns = currentPackage.modify().addModule(newModuleConfig).apply();
-//            PackageCompilation pkgCompilation = packageIns.getCompilation();
             Module module = project.currentPackage().getDefaultModule();
             PackageCompilation pkgCompilation = project.currentPackage().getCompilation();
             JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(pkgCompilation, JvmTarget.JAVA_11);
