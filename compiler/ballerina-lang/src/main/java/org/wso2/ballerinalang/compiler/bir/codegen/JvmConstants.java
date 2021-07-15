@@ -350,7 +350,12 @@ public class JvmConstants {
 
     // ballerina error reasons for ASM operations.
     public static final String CLASS_TOO_LARGE = "ClassTooLarge";
+
+    //Method generation constants
+    public static final String LAMBDA_PREFIX = "$lambda$";
+    public static final String LAMBDA_SUFFIX = "$";
     public static final String TEST_EXEC_FUNCTION = "__testExecute__";
+    public static final String MAIN_FUNCTION = "main";
 
     public static final String TYPE_NOT_SUPPORTED_MESSAGE = "JVM generation is not supported for type ";
 

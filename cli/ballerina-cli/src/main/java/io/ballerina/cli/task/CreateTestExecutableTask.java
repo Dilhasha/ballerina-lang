@@ -81,7 +81,7 @@ public class CreateTestExecutableTask implements Task {
             Module module = project.currentPackage().getDefaultModule();
             PackageCompilation pkgCompilation = project.currentPackage().getCompilation();
             JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(pkgCompilation, JvmTarget.JAVA_11);
-            jBallerinaBackend.emitTestJar(JBallerinaBackend.OutputType.EXEC, executablePath, module.moduleName());
+            jBallerinaBackend.emitTestJar(executablePath, module.moduleName());
 
             // Print warnings for conflicted jars
             if (!jBallerinaBackend.conflictedJars().isEmpty()) {
@@ -107,49 +107,12 @@ public class CreateTestExecutableTask implements Task {
         }
     }
 
-    private DocumentConfig generateDocument(Project project, Module module, Document document) {
-        String newFileContent = document.textDocument().toString();
-        String newFilePath = project.sourceRoot().toString() + "/" +  document.name();
-        if(document.name().contains("/")){
-            newFilePath = project.sourceRoot().toString() + "/" +  document.name().split("/")[1];
-        }
-        DocumentId newDocumentId = DocumentId.create(newFilePath, module.moduleId());
-        return DocumentConfig.from(newDocumentId, newFileContent, document.name());
-    }
-
-    private DocumentConfig generateMainDocument(Project project, Module module, Document document) {
-        String newFileContent = "import ballerina/test;\n" +
-                "\n" +
-                "public function main() returns error? {\n" +
-                "    () v = check testExecute();\n" +
-                "}\n" +
-                "\n" +
-                "function getTests() returns map<function> {\n" +
-                "    function f1 = function() {\n" +
-                "        test:assertTrue(false);\n" +
-                "    };\n" +
-                "    function f2 = function() {\n" +
-                "        test:assertEquals(\"apple\", \"apple\");\n" +
-                "    };\n" +
-                "    function f3 = function() {\n" +
-                "        test:assertNotEquals(false, true);\n" +
-                "    };\n" +
-                "    return {\"f1\": f1,\"f2\":f2,\"f3\":f3};\n" +
-                "}\n" +
-                "\n" +
-                "\n";
-        Path filePath = project.sourceRoot().resolve(document.name());
-        DocumentId newDocumentId = DocumentId.create(filePath.toString(), module.moduleId());
-        return DocumentConfig.from(newDocumentId, newFileContent, document.name());
-    }
-
     private void notifyPlugins(Project project, Target target) {
         ServiceLoader<CompilerPlugin> processorServiceLoader = ServiceLoader.load(CompilerPlugin.class);
         for (CompilerPlugin plugin : processorServiceLoader) {
             plugin.codeGenerated(project, target);
         }
     }
-
 
     private Path getTestExecutablePath(Project project) {
 

@@ -16,6 +16,7 @@ public class Executer {
                     function testFunc = testFunctions.get(testName).test;
                     if (testFunc is function () returns ()) {
                         future<error?> startTestResult = self.startTest(testFunc);
+                        //Add the start time to a map od startTimes
                         testWorkers[testName] = startTestResult;
                     }
                 }

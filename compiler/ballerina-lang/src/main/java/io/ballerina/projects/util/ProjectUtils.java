@@ -240,7 +240,7 @@ public class ProjectUtils {
     }
 
     public static String getTestExecutableName(Package pkg) {
-        // <packagename>.jar
+        // <packagename>_test.jar
         return pkg.packageName().toString() + "_test" + BLANG_COMPILED_JAR_EXT;
     }
 

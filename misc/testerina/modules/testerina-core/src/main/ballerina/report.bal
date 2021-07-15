@@ -3,11 +3,11 @@ public class Reporter {
 
     map<future<error?>> testWorkers = {};
 
-    public function init(map<future<error?>> testWorkers) {
+    public isolated function init(map<future<error?>> testWorkers) {
         self.testWorkers = testWorkers;
     }
 
-    public function printTestResult(string testName) returns boolean {
+    isolated function printTestResult(string testName) returns boolean {
         boolean isPassed = false;
         future<error?> w = self.testWorkers.get(testName);
         error? result = trap wait w;
@@ -21,7 +21,7 @@ public class Reporter {
         return isPassed;
     }
 
-public function print() {
+    public function print() {
         map<future<boolean>> testReporters = {};
         int totalTestCount = 0;
         int passedTestCount = 0;

@@ -214,32 +214,18 @@ public class JBallerinaBackend extends CompilerBackend {
         return new EmitResult(true, diagnosticResult, generatedArtifact);
     }
 
-    public EmitResult emitTestJar(OutputType outputType, Path filePath, ModuleName moduleName) {
+    public EmitResult emitTestJar(Path filePath, ModuleName moduleName) {
         Path generatedArtifact = null;
-
         if (diagnosticResult.hasErrors()) {
             return new EmitResult(false, diagnosticResult, generatedArtifact);
         }
-
-        switch (outputType) {
-            case EXEC:
-                generatedArtifact = emitTestExecutable(filePath, moduleName);
-                break;
-            case BALA:
-                generatedArtifact = emitBala(filePath);
-                break;
-            default:
-                throw new RuntimeException("Unexpected output type: " + outputType);
-        }
-
+        generatedArtifact = emitTestExecutable(filePath, moduleName);
         List<Diagnostic> pluginDiagnostics = packageCompilation.notifyCompilationCompletion(filePath);
         if (!pluginDiagnostics.isEmpty()) {
             ArrayList<Diagnostic> diagnostics = new ArrayList<>(diagnosticResult.allDiagnostics);
             diagnostics.addAll(pluginDiagnostics);
-
             diagnosticResult = new DefaultDiagnosticResult(diagnostics);
         }
-
         // TODO handle the EmitResult properly
         return new EmitResult(true, diagnosticResult, generatedArtifact);
     }
@@ -545,11 +531,10 @@ public class JBallerinaBackend extends CompilerBackend {
     private Path emitTestExecutable(Path executableFilePath, ModuleName moduleName) {
         Manifest manifest = createManifest();
         Collection<JarLibrary> jarLibraries = jarResolver.getJarFilePathsRequiredForTestExecution(moduleName);
-
         try {
             assembleExecutableJar(executableFilePath, manifest, jarLibraries);
         } catch (IOException e) {
-            throw new ProjectException("error while creating the executable jar file for package '" +
+            throw new ProjectException("error while creating the test executable jar file for package '" +
                     this.packageContext.packageName().toString() + "' : " + e.getMessage(), e);
         }
         return executableFilePath;

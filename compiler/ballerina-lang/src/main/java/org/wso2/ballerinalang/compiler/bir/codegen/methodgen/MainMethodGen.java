@@ -154,7 +154,7 @@ public class MainMethodGen {
     }
 
     public void generateTestMainMethod(BIRNode.BIRFunction testExec, ClassWriter cw, BIRNode.BIRPackage pkg,
-                                   String initClass, String testInitClass, boolean serviceEPAvailable) {
+                                   String initClass, boolean serviceEPAvailable) {
 
         MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null,
                 null);

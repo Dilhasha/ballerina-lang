@@ -96,8 +96,11 @@ import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.BALLERINA
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.CURRENT_MODULE_VAR_NAME;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.ENCODED_DOT_CHARACTER;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.JVM_INIT_METHOD;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.LAMBDA_PREFIX;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.LAMBDA_SUFFIX;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.LOCK_STORE;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.LOCK_STORE_VAR_NAME;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MAIN_FUNCTION;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MODULE;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MODULE_INIT_CLASS_NAME;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.MODULE_STARTED;
@@ -107,6 +110,7 @@ import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.OBJECT;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.SERVICE_EP_AVAILABLE;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.STRING_VALUE;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.TEST_EXEC_FUNCTION;
+import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.TEST_INIT;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmConstants.VALUE_CREATOR;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmDesugarPhase.addDefaultableBooleanVarsToSignature;
 import static org.wso2.ballerinalang.compiler.bir.codegen.JvmDesugarPhase.rewriteRecordInits;
@@ -392,10 +396,10 @@ public class JvmPackageGen {
         throw new IllegalStateException("cannot find function: '" + funcName + "'");
     }
 
-    private BIRFunction getMainFunc(List<BIRFunction> funcs) {
+    private BIRFunction getBIRFunction(List<BIRFunction> funcs, String funcName) {
         BIRFunction userMainFunc = null;
         for (BIRFunction func : funcs) {
-            if (func != null && func.name.value.equals("main")) {
+            if (func != null && func.name.value.equals(funcName)) {
                 userMainFunc = func;
                 break;
             }
@@ -403,31 +407,6 @@ public class JvmPackageGen {
 
         return userMainFunc;
     }
-
-    private BIRFunction getTestInitFunc(List<BIRFunction> funcs) {
-        BIRFunction userMainFunc = null;
-        for (BIRFunction func : funcs) {
-            if (func != null && func.name.value.equals("$gen$$0046$0060testinit$0062")) {
-                userMainFunc = func;
-                break;
-            }
-        }
-
-        return userMainFunc;
-    }
-
-    private BIRFunction getTestExecFunc(List<BIRFunction> funcs) {
-        BIRFunction userMainFunc = null;
-        for (BIRFunction func : funcs) {
-            if (func != null && func.name.value.equals(TEST_EXEC_FUNCTION)) {
-                userMainFunc = func;
-                break;
-            }
-        }
-
-        return userMainFunc;
-    }
-
 
     private void generateModuleClasses(BIRPackage module, Map<String, byte[]> jarEntries,
                                        String moduleInitClass, String testInitClass, JvmBStringConstantsGen stringConstantsGen,
@@ -456,7 +435,7 @@ public class JvmPackageGen {
                     }
                 }
 
-                BIRFunction mainFunc = getMainFunc(module.functions);
+                BIRFunction mainFunc = getBIRFunction(module.functions, MAIN_FUNCTION);
                 String mainClass = "";
                 if (mainFunc != null) {
                     mainClass = getModuleLevelClassName(module.packageID, JvmCodeGenUtil
@@ -466,22 +445,25 @@ public class JvmPackageGen {
                 MainMethodGen mainMethodGen = new MainMethodGen(symbolTable, jvmTypeGen, jvmCastGen,
                                                                 asyncDataCollector);
                 if (isTest) {
-                    BIRFunction testInitFunc = getTestInitFunc(module.functions);
-                    BIRFunction testExecFunc = getTestExecFunc(module.functions);
-                    mainMethodGen.generateTestMainMethod(testExecFunc, cw, module, moduleClass, testInitClass, serviceEPAvailable);
+                    BIRFunction testInitFunc = getBIRFunction(module.functions, TEST_INIT);
+                    BIRFunction testExecFunc = getBIRFunction(module.functions, TEST_EXEC_FUNCTION);
+                    mainMethodGen.generateTestMainMethod(testExecFunc, cw, module, moduleClass, serviceEPAvailable);
                     if (testInitFunc != null) {
-                        mainMethodGen.generateLambdaForFunc(testInitFunc, cw, testInitClass, "$lambda$$gen$$0046$0060testinit$0062$");
+                        mainMethodGen.generateLambdaForFunc(testInitFunc, cw, testInitClass, LAMBDA_PREFIX +
+                                TEST_INIT + LAMBDA_SUFFIX);
                     }
                     if (testExecFunc != null) {
                         String testExecClass = getModuleLevelClassName(module.packageID, JvmCodeGenUtil
                                 .cleanupPathSeparators(testExecFunc.pos.lineRange().filePath()));
-                        mainMethodGen.generateLambdaForFunc(testExecFunc, cw, testExecClass, "$lambda$" + TEST_EXEC_FUNCTION + "$");
+                        mainMethodGen.generateLambdaForFunc(testExecFunc, cw, testExecClass, LAMBDA_PREFIX +
+                                TEST_EXEC_FUNCTION + LAMBDA_SUFFIX);
                     }
                 } else {
                     mainMethodGen.generateMainMethod(mainFunc, cw, module, moduleClass, serviceEPAvailable);
                 }
                 if (mainFunc != null) {
-                    mainMethodGen.generateLambdaForFunc(mainFunc, cw, mainClass, "$lambda$main$");
+                    mainMethodGen.generateLambdaForFunc(mainFunc, cw, mainClass, LAMBDA_PREFIX +
+                            MAIN_FUNCTION + LAMBDA_SUFFIX);
                 }
                 initMethodGen.generateLambdaForPackageInits(cw, module, moduleClass, moduleImports, jvmCastGen);
 
