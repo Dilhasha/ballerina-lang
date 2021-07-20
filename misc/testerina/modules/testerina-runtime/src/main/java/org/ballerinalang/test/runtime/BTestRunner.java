@@ -33,6 +33,7 @@ import io.ballerina.runtime.api.types.StringType;
 import io.ballerina.runtime.api.types.TupleType;
 import io.ballerina.runtime.api.types.Type;
 import io.ballerina.runtime.api.types.XmlType;
+import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
@@ -60,12 +61,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
 import java.util.Vector;
@@ -96,6 +101,9 @@ public class BTestRunner {
     private PrintStream outStream;
     private TesterinaReport tReport;
 
+    private List<String> specialCharacters =
+            new ArrayList<>(Arrays.asList("\n", "\r", "\\u", "\"", "{", "}",
+                    "[", "]"));
     /**
      * Create Test Runner with given loggers.
      *
@@ -499,8 +507,23 @@ public class BTestRunner {
         boolean isIncluded = false;
         List<String> keyList = suite.getDataKeyValues().get(testName);
         for (String keyValue : keyList) {
-            isIncluded = Pattern.matches(keyValue.replace(TesterinaConstants.WILDCARD, DOT +
-                            TesterinaConstants.WILDCARD), key);
+
+                String pattern = updateSpecialCharacters(keyValue).replace(TesterinaConstants.WILDCARD, DOT +
+                    TesterinaConstants.WILDCARD);
+                String decodedKey = updateSpecialCharacters(key);
+                if(pattern.equals(decodedKey)){
+                    isIncluded = true;
+                }else {
+                    isIncluded = Pattern.matches(pattern, decodedKey);
+                }
+//            String encodedPattern = updateSpecialCharacters(keyValue);
+//            encodedPattern = encodedPattern.replace("*", ".*");
+//                if(encodedPattern.equals(key)){
+//                    isIncluded = true;
+//                } else {
+//                    isIncluded = Pattern.matches(encodedPattern, key);
+//                }
+
             if (isIncluded) {
                 break;
             }
@@ -516,8 +539,10 @@ public class BTestRunner {
             if (isIncludedKey(suite, testName, key)) {
                 valueSets = invokeTestFunction(suite, testName, classLoader, scheduler,
                         argTypes, arg);
-                computeFunctionResult(testName + DATA_KEY_SEPARATOR + key,
-                        packageName, shouldSkip, failedOrSkippedTests, valueSets);
+
+                    computeFunctionResult(testName + DATA_KEY_SEPARATOR + escapeSpecialCharacters(key),
+                            packageName, shouldSkip, failedOrSkippedTests, valueSets);
+
             }
         } else {
             valueSets = invokeTestFunction(suite, testName, classLoader, scheduler, argTypes,
@@ -554,8 +579,9 @@ public class BTestRunner {
                     List<Object[]> argList = extractArguments((BMap) valueSets);
                     int i = 0;
                     for (Object[] arg : argList) {
-                        invokeDataDrivenTest(suite, test.getTestName(), keyValues.get(i), classLoader, scheduler,
-                                shouldSkip, packageName, arg, argTypes, failedOrSkippedTests);
+
+                            invokeDataDrivenTest(suite, test.getTestName(), escapeSpecialCharacters(keyValues.get(i)), classLoader, scheduler,
+                                    shouldSkip, packageName, arg, argTypes, failedOrSkippedTests);
                         i++;
                     }
                 } else if (valueSets instanceof BArray) {
@@ -947,6 +973,99 @@ public class BTestRunner {
             errStream.println(errorMsg + ":" + e.getMessage());
         }
 
+    }
+
+    private String escapeSpecialCharacters(String key) {
+        String updatedKey = key;
+        String encodedValue;
+        for (String character : specialCharacters) {
+            try {
+                if (updatedKey.contains(character)) {
+                    encodedValue = URLEncoder.encode(character, StandardCharsets.UTF_8.toString());
+                    updatedKey = updatedKey.replace(character, encodedValue);
+                }
+            } catch (UnsupportedEncodingException e) {
+                errStream.println("Error occurred while updating special characters in the data provider case value '"
+                        + key + "'");
+            }
+        }
+        updatedKey = "'" + updatedKey + "'";
+//        if (updatedKey.contains("\n")) {
+//            updatedKey = updatedKey.replace("\n", "\\\\n");
+//        }
+//        if (updatedKey.contains("\r")) {
+//            updatedKey = updatedKey.replace("\r", "\\\\r");
+//        }
+//        if (updatedKey.contains("\\u")) {
+//            updatedKey = updatedKey.replace("\\u", "\\\\u");
+//        }
+//        if (updatedKey.contains("{")) {
+//            updatedKey = updatedKey.replace("{", "\\{");
+//        }
+//        if (updatedKey.contains("}")) {
+//            updatedKey = updatedKey.replace("{", "\\}");
+//        }
+//        if (updatedKey.contains("\"")) {
+//            updatedKey = updatedKey.replace("\"", "\\\"");
+//        }
+//        if(!(updatedKey.startsWith("'") || updatedKey.endsWith("'"))) {
+//            updatedKey = "'" + updatedKey + "'";
+//        }
+
+//        try{
+//            updatedKey = URLEncoder.encode(key, StandardCharsets.UTF_8.toString());
+//        } catch (UnsupportedEncodingException e) {
+//            errStream.println("Error occurred while escaping special characters in the data mapper case value '"
+//                    + key + "'");
+//        }
+        return updatedKey;
+    }
+
+    private String updateSpecialCharacters(String key) {
+        String updatedKey = key;
+        if(updatedKey.startsWith("'") && updatedKey.endsWith("'")){
+            updatedKey = updatedKey.substring(1, updatedKey.length()-2);
+        }
+        String encodedValue, decodedValue;
+        for (String character : specialCharacters) {
+            try {
+                encodedValue = URLEncoder.encode(character, StandardCharsets.UTF_8.toString());
+                if (updatedKey.contains(encodedValue)) {
+                    decodedValue = URLDecoder.decode(character, StandardCharsets.UTF_8.toString());
+                    updatedKey = updatedKey.replace(encodedValue, decodedValue);
+                }
+            } catch (UnsupportedEncodingException e) {
+                errStream.println("Error occurred while updating special characters in the data provider case value '"
+                        + key + "'");
+            }
+        }
+//        if(key.startsWith("'") && key.endsWith("'")) {
+//            if (key.contains("\\n")) {
+//                updatedKey = key.replace("\\n", "\\\\n");
+//            }
+//            if (key.contains("\\r")) {
+//                updatedKey = key.replace("\\r", "\\\\r");
+//            }
+//            if (updatedKey.contains("\\u")) {
+//                updatedKey = updatedKey.replace("\\u", "\\\\u");
+//            }
+//            if (updatedKey.contains("\"")) {
+//                updatedKey = updatedKey.replace("\"", "\\\"");
+//            }
+//            if (updatedKey.contains("{")) {
+//                updatedKey = updatedKey.replace("{", "\\{");
+//            }
+//            if (updatedKey.contains("}")) {
+//                updatedKey = updatedKey.replace("{", "\\}");
+//            }
+//        }
+//        try {
+//            updatedKey = URLDecoder.decode(key, StandardCharsets.UTF_8.toString());
+//        } catch (UnsupportedEncodingException e) {
+//            errStream.println("Error occurred while updating special characters in the data mapper case value '"
+//                    + key + "'");
+//        }
+        return updatedKey;
     }
 
 }

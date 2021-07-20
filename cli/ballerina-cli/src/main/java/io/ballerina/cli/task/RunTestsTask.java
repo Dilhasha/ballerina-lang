@@ -210,11 +210,7 @@ public class RunTestsTask implements Task {
             if (isSingleTestExecution || isRerunTestExecution) {
                 // Update data driven tests with key
                 updatedSingleExecTests = filterKeyBasedTests(moduleName.moduleNamePart(), suite, singleExecTests);
-                if (!updatedSingleExecTests.isEmpty()) {
-                    suite.setTests(TesterinaUtils.getSingleExecutionTests(suite, updatedSingleExecTests));
-                } else {
-                    suite.setTests(TesterinaUtils.getSingleExecutionTests(suite, singleExecTests));
-                }
+                suite.setTests(TesterinaUtils.getSingleExecutionTests(suite, updatedSingleExecTests));
             }
             if (project.kind() == ProjectKind.SINGLE_FILE_PROJECT) {
                 suite.setSourceFileName(project.sourceRoot().getFileName().toString());
@@ -265,20 +261,35 @@ public class RunTestsTask implements Task {
         cleanTempCache(project, cachesRoot);
     }
 
+    private boolean containsModulePrefix(String testName){
+        boolean hasModPrefix = false;
+        if(testName.contains(MODULE_SEPARATOR)) {
+            if(testName.contains(DATA_KEY_SEPARATOR)){
+                if(testName.indexOf(MODULE_SEPARATOR) <
+                        testName.indexOf(DATA_KEY_SEPARATOR)){
+                    hasModPrefix = true;
+                }
+            } else{
+                hasModPrefix = true;
+
+            }
+        }
+        return hasModPrefix;
+    }
     /**
      * Check whether this module is included in the provided test name.
      *
      * @param testName String
-     * @param packageID String
+     * @param packageName String
      * @param moduleName String
      * @return boolean
      */
-    private boolean includesModule(String testName, String packageID, String moduleName) {
+    private boolean includesModule(String testName, String packageName, String moduleName) {
         boolean flag = false;
-        if (testName.contains(MODULE_SEPARATOR)) {
-            String[] functionDetail = testName.split(MODULE_SEPARATOR);
+        if (containsModulePrefix(testName)) {
+            String prefix = testName.substring(0, testName.indexOf(MODULE_SEPARATOR));
             try {
-                if (functionDetail[0].equals(packageID) || functionDetail[0].equals(packageID + DOT + moduleName)) {
+                if (prefix.equals(packageName) || prefix.equals(packageName + DOT + moduleName)) {
                     flag = true;
                 }
             } catch (IndexOutOfBoundsException e) {
@@ -305,10 +316,11 @@ public class RunTestsTask implements Task {
             if (testName.contains(DATA_KEY_SEPARATOR) && includesModule(testName, suite.getPackageID(), moduleName)) {
                 try {
                     // Separate test name and the data set key
-                    String originalTestName = testName.substring(0, testName.indexOf(DATA_KEY_SEPARATOR));
+                    String testValue = testName.substring(0, testName.indexOf(DATA_KEY_SEPARATOR));
+                    String originalTestName = testValue;
                     String caseValue = testName.substring(testName.indexOf(DATA_KEY_SEPARATOR) + 1);
                     if (originalTestName.contains(MODULE_SEPARATOR)) {
-                        originalTestName = originalTestName.split(MODULE_SEPARATOR)[1];
+                        originalTestName = originalTestName.substring(originalTestName.indexOf(MODULE_SEPARATOR) + 1);
                     }
                     if (keyValues.containsKey(originalTestName)) {
                         keyValues.get(originalTestName).add(caseValue);
@@ -316,8 +328,8 @@ public class RunTestsTask implements Task {
                         keyValues.put(originalTestName, new ArrayList<>(Arrays.asList(caseValue)));
                     }
                     // Update the test name in the filtered test list
-                    if (!updatedSingleExecTests.contains(originalTestName)) {
-                        updatedSingleExecTests.add(originalTestName);
+                    if (!updatedSingleExecTests.contains(testValue)) {
+                        updatedSingleExecTests.add(testValue);
                     }
                 } catch (IndexOutOfBoundsException e) {
                     throw createLauncherException("error occurred while filtering tests based on provided key values",
