@@ -382,11 +382,9 @@ public class BTestRunner {
         List<String> failedAfterFuncTests = new ArrayList<>();
         suite.getTests().forEach(test -> {
             AtomicBoolean shouldSkipTest = new AtomicBoolean(false);
-
             // execute the before groups functions
             executeBeforeGroupFunctions(test, suite, classLoader, scheduler, shouldSkip,
                     shouldSkipTest, shouldSkipAfterGroups);
-
             // run the before each tests
             executeBeforeEachFunction(test, suite, classLoader, scheduler, shouldSkip, shouldSkipTest);
             // run the before tests
@@ -398,10 +396,8 @@ public class BTestRunner {
             executeAfterFunction(test, suite, classLoader, scheduler, shouldSkip, shouldSkipTest, failedAfterFuncTests);
             // run the after each tests
             executeAfterEachFunction(test, suite, classLoader, scheduler, shouldSkip, shouldSkipTest);
-
             // execute the after groups functions
-            executeAfterGroupFunctions(test, suite, classLoader, scheduler, shouldSkip,
-                    shouldSkipTest, shouldSkipAfterGroups);
+            executeAfterGroupFunctions(test, suite, classLoader, scheduler, shouldSkip, shouldSkipAfterGroups);
         });
     }
 
@@ -602,7 +598,6 @@ public class BTestRunner {
         for (String groupName : test.getGroups()) {
             suite.getGroups().get(groupName).incrementExecutedCount();
         }
-
         if (!packageName.equals(TesterinaConstants.DOT)) {
             Path sourceRootPath = Paths.get(suite.getSourceRootPath()).resolve(TesterinaConstants.TARGET_DIR_NAME);
             Path jsonPath = Paths.get(sourceRootPath.toString(), TesterinaConstants.RERUN_TEST_JSON_FILE);
@@ -677,32 +672,25 @@ public class BTestRunner {
     }
 
     private void executeAfterGroupFunctions(Test test, TestSuite suite, ClassLoader classLoader, Scheduler scheduler,
-                                            AtomicBoolean shouldSkip, AtomicBoolean shouldSkipTest,
-                                            AtomicBoolean shouldSkipAfterGroups)  {
-        if (!shouldSkipAfterGroups.get() && !shouldSkip.get() && !shouldSkipTest.get()) {
-            for (String groupName : test.getGroups()) {
-                if (!suite.getGroups().get(groupName).getAfterGroupsFunctions().isEmpty()
-                        && suite.getGroups().get(groupName).isLastTestExecuted()) {
-                    // run before tests
-                    String errorMsg;
-                    for (String afterGroupFunc : suite.getGroups().get(groupName).getAfterGroupsFunctions()) {
+                                            AtomicBoolean shouldSkip, AtomicBoolean shouldSkipAfterGroups) {
+        for (String groupName : test.getGroups()) {
+            if (!suite.getGroups().get(groupName).getAfterGroupsFunctions().isEmpty()
+                    && suite.getGroups().get(groupName).isLastTestExecuted()) {
+                suite.getGroups().get(groupName).getAfterGroupsFunctions().forEach((afterGroupFunc, alwaysRun) -> {
+                    if (!(shouldSkipAfterGroups.get() || shouldSkip.get()) || alwaysRun.get()) {
                         try {
                             Object value = invokeTestFunction(suite, afterGroupFunc, classLoader, scheduler);
-                            if (value instanceof BError || value instanceof  Exception || value instanceof Error) {
+                            if (value instanceof BError || value instanceof Exception || value instanceof Error) {
                                 throw (Throwable) value;
                             }
                         } catch (Throwable e) {
-                            shouldSkip.set(true);
-                            shouldSkipTest.set(true);
-                            shouldSkipAfterGroups.set(true);
-                            errorMsg = String.format("\t[fail] " + afterGroupFunc +
+                            String errorMsg = String.format("\t[fail] " + afterGroupFunc +
                                             " [after test group function for the test %s] :\n\t    %s", test,
                                     formatErrorMessage(e));
                             errStream.println(errorMsg);
                         }
                     }
-
-                }
+                });
             }
         }
     }

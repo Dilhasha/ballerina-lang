@@ -250,12 +250,13 @@ public class TestSuite {
      * @param afterGroupFunc name of the function
      * @param groups         groups to which the function belongs
      */
-    public void addAfterGroupFunction(String afterGroupFunc, List<String> groups) {
+    public void addAfterGroupFunction(String afterGroupFunc, List<String> groups,
+                                      AtomicBoolean alwaysRun) {
         for (String groupName : groups) {
             if (this.groups.get(groupName) == null) {
                 this.groups.put(groupName, new TestGroup());
             }
-            this.groups.get(groupName).addAfterGroupsFunction(afterGroupFunc);
+            this.groups.get(groupName).addAfterGroupsFunction(afterGroupFunc, alwaysRun);
         }
     }
 

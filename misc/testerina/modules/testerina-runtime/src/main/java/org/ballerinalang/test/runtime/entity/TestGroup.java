@@ -20,6 +20,9 @@ package org.ballerinalang.test.runtime.entity;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Represents a test group in the test suite.
@@ -27,14 +30,17 @@ import java.util.List;
 public class TestGroup {
     private int testCount;
     private int executedCount;
+    private List<String> executedAfterGroupsFunctions;
     private List<String> beforeGroupsFunctions;
-    private List<String> afterGroupsFunctions;
+    private Map<String, AtomicBoolean> afterGroupsFunctions;
+
 
     public TestGroup() {
         this.testCount = 0;
         this.executedCount = 0;
         this.beforeGroupsFunctions = new ArrayList<>();
-        this.afterGroupsFunctions = new ArrayList<>();
+        this.afterGroupsFunctions = new TreeMap<>();
+        this.executedAfterGroupsFunctions = new ArrayList<>();
     }
 
     /**
@@ -75,7 +81,7 @@ public class TestGroup {
      *
      * @return list of function names
      */
-    public List<String> getAfterGroupsFunctions() {
+    public Map<String, AtomicBoolean> getAfterGroupsFunctions() {
         return afterGroupsFunctions;
     }
 
@@ -84,8 +90,32 @@ public class TestGroup {
      *
      * @param afterGroupsFunc name of the function
      */
-    public void addAfterGroupsFunction(String afterGroupsFunc) {
-        this.afterGroupsFunctions.add(afterGroupsFunc);
+    public void addAfterGroupsFunction(String afterGroupsFunc, AtomicBoolean alwaysRun) {
+        this.afterGroupsFunctions.put(afterGroupsFunc, alwaysRun);
+    }
+
+    /**
+     * Adds a @AfterGroups function to the executed function list.
+     *
+     * @param afterGroupsFunc name of the function
+     */
+    public void updateExecutedAfterGroupsList(String afterGroupsFunc) {
+        this.executedAfterGroupsFunctions.add(afterGroupsFunc);
+    }
+
+    /**
+     * Returns whether the given after groups function is already executed.
+     *
+     * @param afterGroupsFunc name of the function
+     * @return
+     */
+    public boolean isExecuted(String afterGroupsFunc) {
+        for (String functionName : this.executedAfterGroupsFunctions) {
+            if (afterGroupsFunc.equals(functionName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -113,6 +143,5 @@ public class TestGroup {
      */
     public void sort() {
         Collections.sort(beforeGroupsFunctions);
-        Collections.sort(afterGroupsFunctions);
     }
 }
