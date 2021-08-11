@@ -21,56 +21,72 @@
 
 import ballerina/test;
 
-string a = "";
+string a = "1";
 
-@test:BeforeGroups { value : ["g1"] }
-function beforeGroupsFunc1() {
+@test:BeforeGroups {value: ["g1"]}
+function beforeGroupsFuncG1() {
     a += "2";
 }
 
-@test:BeforeGroups { value : ["g2"] }
-function beforeGroupsFunc2() {
+@test:BeforeGroups {value: ["g2"]}
+function beforeGroupsFuncG2() {
+    test:assertFail(msg = "Before groups function for g2 failed!");
     a += "4";
 }
 
 @test:AfterGroups { value : ["g1", "g2"] }
-function afterGroupsFunc1() {
-    a += "7";
+function afterGroupsFuncG1G2() {
+    a += "56";
+}
+
+@test:AfterGroups {value: ["g2"]}
+function afterGroupsFuncG2() {
+    a += "9";
+}
+
+@test:AfterGroups {value: ["g2"], alwaysRun: true}
+function afterGroupsFunc1G2() {
+    a+="23456";
 }
 
 @test:Config {
     groups: ["g1"]
 }
-function testFunction2() {
+function testFunction1() {
     a += "3";
 }
 
+@test:Config{
+    groups: ["g1", "g2"]
+}
+function testFailedFunction() {
+    test:assertFail("Intentinally failing dopends on function.");
+}
+
 @test:Config {
-    groups : ["g2"],
-    dependsOn: [testFunction2]
+    groups: ["g1", "g2"]
+}
+function testFunction2() {
+    a += "4";
+}
+
+@test:Config {
+    groups: ["g2"],
+    dependsOn: [testFailedFunction, testFunction2]
 }
 function testFunction3() {
     a += "5";
 }
 
 @test:Config {
-    groups : ["g1", "g2"],
-    dependsOn: [testFunction]
+    groups: ["g2"],
+    dependsOn: [testFunction3]
 }
 function testFunction4() {
-    a += "6";
-}
-
-@test:Config {
-    groups : ["g2"],
-    dependsOn: [testFunction4]
-}
-function testFunction5() {
     a += "8";
 }
 
-# After Suite Function
-@test:AfterSuite {}
-function afterSuiteFunc() {
-    test:assertEquals(a, "123456787");
+@test:AfterSuite{}
+function testAfterSuite() {
+    test:assertEquals(a, "123456");
 }

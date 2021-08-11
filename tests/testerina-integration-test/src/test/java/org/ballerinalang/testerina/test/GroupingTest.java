@@ -159,4 +159,34 @@ public class GroupingTest extends BaseTestCase {
         }
     }
 
+    @Test
+    public void afterGroupsWithAlwaysRun() throws BallerinaTestException {
+        String[] args = mergeCoverageArgs(new String[]{"--groups", "g2", "after-groups-tests.bal"});
+        String output = balClient.runMainAndReadStdOut("test", args,
+                new HashMap<>(), projectPath, true);
+        if (output.contains("[fail] testAfterSuite")) {
+            Assert.fail("Test failed due to failure in alwaysRun property for AfterGroups");
+        }
+    }
+
+    @Test
+    public void afterGroupsWithFailedTests() throws BallerinaTestException {
+        String[] args = mergeCoverageArgs(new String[]{"--groups", "g1", "after-groups-tests.bal"});
+        String output = balClient.runMainAndReadStdOut("test", args,
+                new HashMap<>(), projectPath, true);
+        if (output.contains("[fail] testAfterSuite")) {
+            Assert.fail("Test failed due to failure in executing after groups function after test failure");
+        }
+    }
+
+    @Test
+    public void afterGroupsWithFailedBeforeEach() throws BallerinaTestException {
+        String[] args = mergeCoverageArgs(new String[]{"--groups", "g2", "after-groups-tests2.bal"});
+        String output = balClient.runMainAndReadStdOut("test", args,
+                new HashMap<>(), projectPath, true);
+        if (output.contains("[fail] testAfterSuite")) {
+            Assert.fail("Test failed due to failure in executing always run AfterGroup function after a BeforeEach " +
+                    "failure");
+        }
+    }
 }
