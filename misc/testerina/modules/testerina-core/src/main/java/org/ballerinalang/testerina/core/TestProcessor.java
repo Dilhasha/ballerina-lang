@@ -50,6 +50,7 @@ import org.ballerinalang.test.runtime.entity.TestSuite;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -458,7 +459,15 @@ public class TestProcessor {
                                         valueExpr instanceof ListConstructorExpressionNode) {
                                     List<String> groupList = new ArrayList<>();
                                     ((ListConstructorExpressionNode) valueExpr).expressions().forEach(
-                                            expression -> groupList.add(getStringValue(expression)));
+                                            expression -> {
+                                                if (groups != null && !groups.isEmpty()) {
+                                                    boolean isGroupPresent = isGroupAvailable(groups,
+                                                            Arrays.asList(getStringValue(expression)));
+                                                    if (isGroupPresent) {
+                                                        groupList.add(getStringValue(expression));
+                                                    }
+                                                }
+                                            });
                                     test.setGroups(groupList);
                                     suite.addTestToGroups(test);
 
