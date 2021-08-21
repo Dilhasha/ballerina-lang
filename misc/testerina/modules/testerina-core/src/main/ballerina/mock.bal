@@ -347,7 +347,7 @@ isolated function validateArgumentsExt(MemberFunctionStub case) returns Error? =
 #
 # + case - Case to register
 # + return - Error if the case registration fails
-isolated function thenReturnExt(MemberFunctionStub|MemberVariableStub case) returns Error? = @java:Method {
+isolated function thenReturnExt(MemberFunctionStub|MemberVariableStub case) returns error? = @java:Method {
     name: "thenReturn",
     'class: "org.ballerinalang.testerina.natives.mock.ObjectMock"
 } external;
@@ -375,7 +375,7 @@ isolated function thenReturnFuncExt(FunctionStub case) returns Error? = @java:Me
 # + mockFunction - The `mockFunction` object
 # + args - Function arguments
 # + return - Function return value or an error if the case registration fails
-isolated function mockHandler(MockFunction mockFunction, (any|error)... args) returns any|Error = @java:Method {
+isolated function mockHandler(MockFunction mockFunction, (any|error)... args) returns any|error|Error = @java:Method {
     name: "mockHandler",
     'class: "org.ballerinalang.testerina.natives.mock.FunctionMock"
 } external;
