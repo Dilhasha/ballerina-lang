@@ -140,7 +140,7 @@ public class MemberFunctionStub {
              panic err;
         }
         self.returnValue = returnValue;
-        Error? thenReturnExtResult = thenReturnExt(self);
+        error? thenReturnExtResult = thenReturnExt(self);
         if (thenReturnExtResult is Error) {
             panic thenReturnExtResult;
         }
@@ -159,7 +159,7 @@ public class MemberFunctionStub {
             panic err;
         }
         self.returnValueSeq = returnValues;
-        Error? thenReturnSeqExtResult = thenReturnSeqExt(self);
+        error? thenReturnSeqExtResult = thenReturnSeqExt(self);
         if (thenReturnSeqExtResult is Error) {
             panic thenReturnSeqExtResult;
         }
@@ -172,7 +172,7 @@ public class MemberFunctionStub {
              panic err;
         }
         self.returnValue = ();
-        Error? thenReturnExtResult = thenReturnExt(self);
+        error? thenReturnExtResult = thenReturnExt(self);
         if (thenReturnExtResult is Error) {
             panic thenReturnExtResult;
         }
@@ -204,7 +204,7 @@ public class MemberVariableStub {
              panic err;
         }
         self.returnValue = returnValue;
-        Error? thenReturnExtResult = thenReturnExt(self);
+        error? thenReturnExtResult = thenReturnExt(self);
         if (thenReturnExtResult is Error) {
             panic thenReturnExtResult;
         }
