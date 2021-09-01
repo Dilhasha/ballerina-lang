@@ -51,6 +51,7 @@ import io.ballerina.projects.ProjectException;
 import io.ballerina.projects.ResolvedPackageDependency;
 import io.ballerina.projects.directory.BuildProject;
 import io.ballerina.projects.directory.ProjectLoader;
+import io.ballerina.projects.util.CompileResult;
 import io.ballerina.projects.util.ProjectConstants;
 import io.ballerina.projects.util.ProjectUtils;
 import io.ballerina.toml.semantic.ast.TomlTableArrayNode;
@@ -61,6 +62,8 @@ import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import javax.tools.Diagnostic;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,6 +89,38 @@ import static org.testng.Assert.assertEquals;
 public class TestBuildProject extends BaseTest {
     private static final Path RESOURCE_DIRECTORY = Paths.get("src/test/resources/");
     private final String dummyContent = "function foo() {\n}";
+
+    @Test
+    public void testProjectRun(){
+        Path projectPath = RESOURCE_DIRECTORY.resolve("outputProj");
+
+        // 1) Initialize the project instance
+        BuildProject project = null;
+        try {
+            project = BuildProject.load(projectPath);
+        } catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        //project.currentPackage().getCompilation();
+        long start = System.currentTimeMillis();
+        Object output = ProjectUtils.runProject(project.currentPackage());
+        if (output instanceof ProjectException) {
+            System.out.println("Error while running project. " + ((ProjectException) output).getMessage());
+            System.out.println(((ProjectException) output).getStackTrace());
+        } else if (output instanceof String) {
+            System.out.println(output);
+        } else if(output instanceof CompileResult){
+            ((CompileResult) output).getDiagnosticResult().diagnostics().forEach(
+                    diagnostic -> {
+                        System.out.println(diagnostic.toString());
+                    }
+            );
+
+        }
+        long total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total);
+
+    }
 
     @Test (description = "tests loading a valid build project")
     public void testBuildProjectAPI() {

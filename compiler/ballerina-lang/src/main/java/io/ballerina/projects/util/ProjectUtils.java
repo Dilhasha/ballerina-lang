@@ -104,6 +104,11 @@ public class ProjectUtils {
     private static final Pattern separatedIdentifierPattern = Pattern.compile("^[a-zA-Z0-9_.]*$");
     private static final Pattern orgNamePattern = Pattern.compile("^[a-zA-Z0-9_]*$");
 
+    public static Object runProject(Package currentPackage){
+        Object result = BCompileUtil.compile(currentPackage);
+        return result;
+    }
+
     /**
      * Validates the org-name.
      *
