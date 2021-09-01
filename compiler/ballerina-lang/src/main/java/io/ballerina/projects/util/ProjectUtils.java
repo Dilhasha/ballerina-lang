@@ -32,11 +32,13 @@ import io.ballerina.projects.PackageName;
 import io.ballerina.projects.PackageOrg;
 import io.ballerina.projects.PackageVersion;
 import io.ballerina.projects.PlatformLibraryScope;
+import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
 import io.ballerina.projects.ResolvedPackageDependency;
 import io.ballerina.projects.Settings;
 import io.ballerina.projects.internal.model.BuildJson;
 import io.ballerina.projects.internal.model.Dependency;
+import io.ballerina.projects.internal.model.Target;
 import org.apache.commons.compress.archivers.jar.JarArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntryPredicate;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -110,9 +112,19 @@ public class ProjectUtils {
     private static final Pattern separatedIdentifierPattern = Pattern.compile("^[a-zA-Z0-9_.]*$");
     private static final Pattern orgNamePattern = Pattern.compile("^[a-zA-Z0-9_]*$");
 
-    public static Object runProject(Package currentPackage){
-        Object result = BCompileUtil.compile(currentPackage);
-        return result;
+    public static void runProject(Project project, List<String> changedFileList){
+        // Clean target
+        try {
+            Target target = new Target(project.sourceRoot());
+            target.clean();
+        } catch (IOException | ProjectException e) {
+            throw new ProjectException("unable to clean the target directory: " + e.getMessage());
+        }
+        // Register subscriber to get responses
+        Subscriber subscriber = new Subscriber();
+        ContentServer.getInstance().registerSubscriber(subscriber);
+        // Run the program
+        BRunUtil.run(project, changedFileList);
     }
 
     /**

@@ -91,6 +91,49 @@ public class TestBuildProject extends BaseTest {
     private static final Path RESOURCE_DIRECTORY = Paths.get("src/test/resources/");
     private final String dummyContent = "function foo() {\n}";
 
+    @Test
+    public void testProjectRun(){
+        Path projectPath = RESOURCE_DIRECTORY.resolve("outputProj");
+
+        // Initialize the project instance - to demonstarte input to the `runProject` API
+        BuildProject project = null;
+        try {
+            project = BuildProject.load(projectPath);
+        } catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        // Attempt 1
+        System.out.println("Compile, codegen and execute");
+        System.out.println("-----------------------------");
+        long start = System.currentTimeMillis();
+
+        ProjectUtils.runProject(project, new ArrayList<>());
+
+        long total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total + "\n");
+
+        // Attempt 2
+        System.out.println("Only execute already loaded classes when no changes done");
+        System.out.println("-----------------------------");
+        start = System.currentTimeMillis();
+
+        ProjectUtils.runProject(project, new ArrayList<>());
+
+        total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total + "\n");
+//
+//        // Attempt 3
+//        System.out.println("Compile, code gen and execute with changes");
+//        System.out.println("-------------------------------------------");
+//        start = System.currentTimeMillis();
+//        output = ProjectUtils.runProject(project,
+//                Arrays.asList(project.sourceRoot() + "/main.bal"));
+//        System.out.println("output: " + output);
+//        total = System.currentTimeMillis() - start;
+//        System.out.println("totalDuration: " + total + "\n");
+
+    }
+
     @Test (description = "tests loading a valid build project")
     public void testBuildProjectAPI() {
         Path projectPath = RESOURCE_DIRECTORY.resolve("myproject");

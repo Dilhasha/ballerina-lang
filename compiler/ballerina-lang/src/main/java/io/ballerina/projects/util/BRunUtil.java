@@ -19,15 +19,15 @@
 package io.ballerina.projects.util;
 
 import io.ballerina.projects.JarResolver;
+import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageManifest;
+import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.internal.configurable.providers.toml.TomlDetails;
 import io.ballerina.runtime.internal.launch.LaunchUtils;
 import io.ballerina.runtime.internal.scheduling.Scheduler;
 import io.ballerina.runtime.internal.scheduling.Strand;
-import io.ballerina.runtime.internal.util.exceptions.BLangRuntimeException;
-import io.ballerina.runtime.internal.values.ErrorValue;
 import io.ballerina.runtime.internal.values.FutureValue;
 import org.wso2.ballerinalang.compiler.bir.codegen.JvmCodeGenUtil;
 import org.wso2.ballerinalang.compiler.desugar.ASTBuilderUtil;
@@ -38,6 +38,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -51,9 +52,25 @@ public class BRunUtil {
     private static final String MAIN_CLASS_NAME = "main";
     private static final String CONFIGURATION_CLASS_NAME = "$configurationMapper";
 
-    public static Object run(CompileResult compileResult)
-            throws ClassNotFoundException, ProjectException {
-        long start = System.currentTimeMillis();
+    public static Class<?> mainClazz;
+    public static Class<?> configClazz;
+    public static Class<?> initClazz;
+    public static boolean classLoaded = false;
+
+    public static void run(Project project, List<String> changedFileList) {
+        Package currentPackage = project.currentPackage();
+        // Skip class loading if there are no changes and classes are already loaded
+        if (!changedFileList.isEmpty() || !classLoaded) {
+            CompileResult compileResult = BCompileUtil.compile(currentPackage);
+            if (compileResult.getErrorCount() != 0) {
+                ContentServer.getInstance().sendMessage("Error during project compilation");
+            }
+            updateClassLoaders(compileResult, changedFileList, project.sourceRoot().toString());
+        }
+        executeMain();
+    }
+
+    private static void updateClassLoaders(CompileResult compileResult, List<String> changedFileList, String projectPath) {
         PackageManifest packageManifest = compileResult.packageManifest();
         String org = packageManifest.org().toString();
         String module = packageManifest.name().toString();
@@ -61,36 +78,36 @@ public class BRunUtil {
         String initClassName = JarResolver.getQualifiedClassName(org, module, version, MODULE_INIT_CLASS_NAME);
         String mainClassName = JarResolver.getQualifiedClassName(org, module, version, MAIN_CLASS_NAME);
         String configClassName = JarResolver.getQualifiedClassName(org, module, version, CONFIGURATION_CLASS_NAME);
+        try {
+            initClazz = compileResult.getClassLoader().loadClass(initClassName);
+            mainClazz = compileResult.getClassLoader().loadClass(mainClassName);
+            configClazz = compileResult.getClassLoader().loadClass(configClassName);
+        } catch (ClassNotFoundException e) {
+            ContentServer.getInstance().sendMessage("Error while loading methods of " + compileResult.projectSourceRoot() +  e.getMessage());
+            return;
+            //throw new RuntimeException("error while invoking init method of " + compileResult.projectSourceRoot(), e);
+        }
+        classLoaded = true;
+    }
 
-        Class<?> initClazz = compileResult.getClassLoader().loadClass(initClassName);
-        Class<?> mainClazz = compileResult.getClassLoader().loadClass(mainClassName);
+    private static void executeMain(){
+        long start = System.currentTimeMillis();
         final Scheduler scheduler = new Scheduler(false);
         TomlDetails configurationDetails = LaunchUtils.getConfigurationDetails();
-        directRun(compileResult.getClassLoader().loadClass(configClassName), "$configureInit",
+        directRun(configClazz, "$configureInit",
                 new Class[]{String[].class, Path[].class, String.class}, new Object[]{new String[]{},
                         configurationDetails.paths, configurationDetails.configContent});
         try {
-            Object output1 = runOnSchedule(initClazz, ASTBuilderUtil.createIdentifier(null, "$moduleInit"), scheduler);
-            Object output2 = runOnSchedule(mainClazz, ASTBuilderUtil.createIdentifier(null, "main"), scheduler);
-            Object output3 = runOnSchedule(mainClazz, ASTBuilderUtil.createIdentifier(null, "$moduleStart"), scheduler);
-            String output = "";
-            if(output1 instanceof String){
-                output = output.concat((String)output1);
-            }
-            if(output2 instanceof String){
-                output = output.concat((String)output2);
-            }
-            if(output3 instanceof String){
-                output = output.concat((String)output3);
-            }
+            runOnSchedule(initClazz, ASTBuilderUtil.createIdentifier(null, "$moduleInit"), scheduler);
+            runOnSchedule(mainClazz, ASTBuilderUtil.createIdentifier(null, "main"), scheduler);
+            runOnSchedule(initClazz, ASTBuilderUtil.createIdentifier(null, "$moduleStart"), scheduler);
             System.out.println("ProgramExecutionDuration: " + (System.currentTimeMillis() - start));
-            return output;
-        }catch(Exception exception){
-            return exception;
+        } catch (Exception exception) {
+            ContentServer.getInstance().sendMessage("Execption occurred while running the program " + exception.getMessage());
         }
     }
 
-    private static Object runOnSchedule(Class<?> initClazz, BLangIdentifier name, Scheduler scheduler) {
+    private static void runOnSchedule(Class<?> initClazz, BLangIdentifier name, Scheduler scheduler) {
         String funcName = JvmCodeGenUtil.cleanupFunctionName(name.value);
         try {
             final Method method = initClazz.getDeclaredMethod(funcName, Strand.class);
@@ -109,11 +126,9 @@ public class BRunUtil {
                     return response;
                 } catch (InvocationTargetException e) {
                     Throwable targetException = e.getTargetException();
-                    if (targetException instanceof RuntimeException) {
-                        return (RuntimeException) targetException;
-                    } else {
-                        return new RuntimeException(targetException);
-                    }
+                    ContentServer.getInstance().sendMessage("Error occurred while invoking the method " + funcName +
+                            targetException.getMessage());
+                    return targetException;
                 } catch (IllegalAccessException e) {
                     throw new ProjectException("Method has private access", e);
                 }
@@ -122,30 +137,20 @@ public class BRunUtil {
                     .schedule(new Object[1], func, null, null, null, PredefinedTypes.TYPE_ANY, null, null);
             scheduler.start();
             if (byteArrayOutputStream.size() > 0) {
-                return byteArrayOutputStream.toString();
+                ContentServer.getInstance().sendMessage(byteArrayOutputStream.toString());
             }
             final Throwable t = out.getPanic();
             if (t != null) {
-                if (t instanceof BLangRuntimeException) {
-                    return new ProjectException(t.getMessage());
-                }
-                if (t instanceof ErrorValue) {
-                    return new ProjectException(
-                            "error: " + ((ErrorValue) t).getPrintableStackTrace());
-                }
-                return t;
-            } else{
-                return out.getResult();
+                ContentServer.getInstance().sendMessage("Error occurred while invoking method " + funcName);
             }
-
         } catch (NoSuchMethodException e) {
-            return new RuntimeException("Error while invoking function '" + funcName + "'", e);
+            ContentServer.getInstance().sendMessage("Error while invoking function '" + funcName + "'" + e.getMessage());
+            //return new RuntimeException("Error while invoking function '" + funcName + "'", e);
         }
     }
 
-    private static Object directRun(Class<?> initClazz, String funcName, Class[] paramTypes, Object[] args)
+    private static void directRun(Class<?> initClazz, String funcName, Class[] paramTypes, Object[] args)
             throws ProjectException{
-        String errorMsg = "Failed to invoke the function '%s' due to %s";
         Object response;
         try {
             // Create a stream to hold the output
@@ -159,12 +164,12 @@ public class BRunUtil {
             System.out.flush();
             System.setOut(existingStream);
             if (response instanceof Throwable) {
-                throw new ProjectException(String.format(errorMsg, funcName, response.toString()),
-                        (Throwable) response);
+                ContentServer.getInstance().sendMessage("Error occurred while executing method " + funcName);
+            }else{
+                ContentServer.getInstance().sendMessage(byteArrayOutputStream.toString());
             }
-            return response;
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            throw new ProjectException(String.format(errorMsg, funcName, e.getMessage()), e);
+            ContentServer.getInstance().sendMessage("Error occurred while executing method " + funcName);
         }
     }
 

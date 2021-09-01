@@ -31,33 +31,23 @@ public class BCompileUtil {
     private static JBallerinaBackend jBallerinaBackend(Package currentPackage) {
         long start = System.currentTimeMillis();
         PackageCompilation packageCompilation = currentPackage.getCompilation();
-        System.out.println("packageCompilationDuration: " + (System.currentTimeMillis()-start));
+        System.out.println("packageCompilationDuration: " + (System.currentTimeMillis() - start));
         if (packageCompilation.diagnosticResult().errorCount() > 0) {
             new ProjectException("compilation failed with errors: " + currentPackage.project().sourceRoot());
         }
         start = System.currentTimeMillis();
         JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
-        System.out.println("codeGenDuration: " + (System.currentTimeMillis()-start));
+        System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
         return jBallerinaBackend;
     }
 
-    public static Object compile(Package currentPackage) {
+    public static CompileResult compile(Package currentPackage) {
         JBallerinaBackend jBallerinaBackend = jBallerinaBackend(currentPackage);
         if (jBallerinaBackend.diagnosticResult().hasErrors()) {
             return new CompileResult(currentPackage, jBallerinaBackend);
         }
         CompileResult compileResult = new CompileResult(currentPackage, jBallerinaBackend);
-        return invokeMain(compileResult);
+        return compileResult;
     }
 
-    private static Object invokeMain(CompileResult compileResult) {
-        if (compileResult.getErrorCount() != 0) {
-            return null;
-        }
-        try {
-            return BRunUtil.run(compileResult);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("error while invoking init method of " + compileResult.projectSourceRoot(), e);
-        }
-    }
 }
