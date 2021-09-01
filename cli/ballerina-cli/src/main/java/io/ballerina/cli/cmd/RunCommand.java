@@ -22,8 +22,10 @@ import io.ballerina.cli.BLauncherCmd;
 import io.ballerina.cli.TaskExecutor;
 import io.ballerina.cli.task.CleanTargetDirTask;
 import io.ballerina.cli.task.CompileTask;
+import io.ballerina.cli.task.DumpBuildTimeTask;
 import io.ballerina.cli.task.ResolveMavenDependenciesTask;
 import io.ballerina.cli.task.RunExecutableTask;
+import io.ballerina.cli.utils.BuildTime;
 import io.ballerina.cli.utils.FileUtils;
 import io.ballerina.projects.BuildOptions;
 import io.ballerina.projects.Project;
@@ -84,8 +86,8 @@ public class RunCommand implements BLauncherCmd {
             "when run is used with a source file or a module.")
     private Boolean observabilityIncluded;
 
-    @CommandLine.Option(names = "--sticky", description = "stick to exact versions locked (if exists)")
-    private Boolean sticky;
+    @CommandLine.Option(names = "--dump-run-time", description = "calculate and dump build time")
+    private Boolean dumpRunTime;
 
     @CommandLine.Option(names = "--dump-graph", hidden = true)
     private boolean dumpGraph;
@@ -115,6 +117,7 @@ public class RunCommand implements BLauncherCmd {
     }
 
     public void execute() {
+        long start = 0;
         if (this.helpFlag) {
             String commandUsageInfo = BLauncherCmd.getCommandUsageInfo(RUN_COMMAND);
             this.errStream.println(commandUsageInfo);
@@ -153,17 +156,20 @@ public class RunCommand implements BLauncherCmd {
             }
         }
 
-        if (sticky == null) {
-            sticky = false;
-        }
-
         // load project
         Project project;
         BuildOptions buildOptions = constructBuildOptions();
         boolean isSingleFileBuild = false;
         if (FileUtils.hasExtension(this.projectPath)) {
             try {
+                if (buildOptions.dumpBuildTime()) {
+                    start = System.currentTimeMillis();
+                    BuildTime.getInstance().timestamp = start;
+                }
                 project = SingleFileProject.load(this.projectPath, buildOptions);
+                if (buildOptions.dumpBuildTime()) {
+                    BuildTime.getInstance().projectLoadDuration = System.currentTimeMillis() - start;
+                }
             } catch (ProjectException e) {
                 CommandUtil.printError(this.errStream, e.getMessage(), runCmd, false);
                 CommandUtil.exitError(this.exitWhenFinish);
@@ -172,7 +178,14 @@ public class RunCommand implements BLauncherCmd {
             isSingleFileBuild = true;
         } else {
             try {
+                if (buildOptions.dumpBuildTime()) {
+                    start = System.currentTimeMillis();
+                    BuildTime.getInstance().timestamp = start;
+                }
                 project = BuildProject.load(this.projectPath, buildOptions);
+                if (buildOptions.dumpBuildTime()) {
+                    BuildTime.getInstance().projectLoadDuration = System.currentTimeMillis() - start;
+                }
             } catch (ProjectException e) {
                 CommandUtil.printError(this.errStream, e.getMessage(), runCmd, false);
                 CommandUtil.exitError(this.exitWhenFinish);
@@ -186,8 +199,8 @@ public class RunCommand implements BLauncherCmd {
                 .addTask(new CompileTask(outStream, errStream)) // compile the modules
 //                .addTask(new CopyResourcesTask(), isSingleFileBuild)
                 .addTask(new RunExecutableTask(args, outStream, errStream))
+                .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
                 .build();
-
         taskExecutor.executeTasks(project);
     }
 
@@ -221,13 +234,13 @@ public class RunCommand implements BLauncherCmd {
 
     private BuildOptions constructBuildOptions() {
         return BuildOptions.builder()
-                .setCodeCoverage(false)
-                .setExperimental(experimentalFlag)
-                .setOffline(offline)
-                .setSkipTests(true)
-                .setTestReport(false)
-                .setObservabilityIncluded(observabilityIncluded)
-                .setSticky(sticky)
+                .codeCoverage(false)
+                .experimental(experimentalFlag)
+                .offline(offline)
+                .skipTests(true)
+                .testReport(false)
+                .observabilityIncluded(observabilityIncluded)
+                .dumpBuildTime(dumpRunTime)
                 .setDumpGraph(dumpGraph)
                 .setDumpRawGraphs(dumpRawGraphs)
                 .setConfigSchemaGen(configSchemaGen)
