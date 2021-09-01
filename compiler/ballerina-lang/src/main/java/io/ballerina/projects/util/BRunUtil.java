@@ -19,7 +19,9 @@
 package io.ballerina.projects.util;
 
 import io.ballerina.projects.JarResolver;
+import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageManifest;
+import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.internal.configurable.providers.toml.TomlDetails;
@@ -38,6 +40,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -51,9 +54,25 @@ public class BRunUtil {
     private static final String MAIN_CLASS_NAME = "main";
     private static final String CONFIGURATION_CLASS_NAME = "$configurationMapper";
 
-    public static Object run(CompileResult compileResult)
-            throws ClassNotFoundException, ProjectException {
-        long start = System.currentTimeMillis();
+    public static Class<?> mainClazz;
+    public static Class<?> configClazz;
+    public static Class<?> initClazz;
+    public static boolean classLoaded = false;
+
+    public static Object run(Project project, List<String> changedFileList) {
+        Package currentPackage = project.currentPackage();
+        // Skip class loading if there are no changes and classes are already loaded
+        if (!changedFileList.isEmpty() || !classLoaded) {
+            CompileResult compileResult = BCompileUtil.compile(currentPackage);
+            if (compileResult.getErrorCount() != 0) {
+                return null;
+            }
+            updateClassLoaders(compileResult, changedFileList, project.sourceRoot().toString());
+        }
+        return executeMain();
+    }
+
+    private static void updateClassLoaders(CompileResult compileResult, List<String> changedFileList, String projectPath) {
         PackageManifest packageManifest = compileResult.packageManifest();
         String org = packageManifest.org().toString();
         String module = packageManifest.name().toString();
@@ -61,12 +80,26 @@ public class BRunUtil {
         String initClassName = JarResolver.getQualifiedClassName(org, module, version, MODULE_INIT_CLASS_NAME);
         String mainClassName = JarResolver.getQualifiedClassName(org, module, version, MAIN_CLASS_NAME);
         String configClassName = JarResolver.getQualifiedClassName(org, module, version, CONFIGURATION_CLASS_NAME);
+        try {
+//            for (String filePath : changedFileList) {
+//                if(projectPath.equals(Paths.get(filePath).getRoot().toString())){
+//
+//                }
+//            }
+            initClazz = compileResult.getClassLoader().loadClass(initClassName);
+            mainClazz = compileResult.getClassLoader().loadClass(mainClassName);
+            configClazz = compileResult.getClassLoader().loadClass(configClassName);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("error while invoking init method of " + compileResult.projectSourceRoot(), e);
+        }
+        classLoaded = true;
+    }
 
-        Class<?> initClazz = compileResult.getClassLoader().loadClass(initClassName);
-        Class<?> mainClazz = compileResult.getClassLoader().loadClass(mainClassName);
+    private static Object executeMain(){
+        long start = System.currentTimeMillis();
         final Scheduler scheduler = new Scheduler(false);
         TomlDetails configurationDetails = LaunchUtils.getConfigurationDetails();
-        directRun(compileResult.getClassLoader().loadClass(configClassName), "$configureInit",
+        directRun(configClazz, "$configureInit",
                 new Class[]{String[].class, Path[].class, String.class}, new Object[]{new String[]{},
                         configurationDetails.paths, configurationDetails.configContent});
         try {

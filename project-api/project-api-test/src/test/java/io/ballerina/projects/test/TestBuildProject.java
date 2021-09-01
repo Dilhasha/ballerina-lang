@@ -64,6 +64,7 @@ import org.testng.annotations.Test;
 
 import javax.tools.Diagnostic;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -94,31 +95,40 @@ public class TestBuildProject extends BaseTest {
     public void testProjectRun(){
         Path projectPath = RESOURCE_DIRECTORY.resolve("outputProj");
 
-        // 1) Initialize the project instance
+        // Initialize the project instance - to demonstarte input to the `runProject` API
         BuildProject project = null;
         try {
             project = BuildProject.load(projectPath);
         } catch (Exception e) {
             Assert.fail(e.getMessage());
         }
-        //project.currentPackage().getCompilation();
+        // Attempt 1
+        System.out.println("Compile, codegen and execute");
+        System.out.println("-----------------------------");
         long start = System.currentTimeMillis();
-        Object output = ProjectUtils.runProject(project.currentPackage());
-        if (output instanceof ProjectException) {
-            System.out.println("Error while running project. " + ((ProjectException) output).getMessage());
-            System.out.println(((ProjectException) output).getStackTrace());
-        } else if (output instanceof String) {
-            System.out.println(output);
-        } else if(output instanceof CompileResult){
-            ((CompileResult) output).getDiagnosticResult().diagnostics().forEach(
-                    diagnostic -> {
-                        System.out.println(diagnostic.toString());
-                    }
-            );
-
-        }
+        String output = ProjectUtils.runProject(project, new ArrayList<>());
+        System.out.println("output: " + output);
         long total = System.currentTimeMillis() - start;
-        System.out.println("totalDuration: " + total);
+        System.out.println("totalDuration: " + total + "\n");
+
+        // Attempt 2
+        System.out.println("Execute only when no changes done");
+        System.out.println("-----------------------------");
+        start = System.currentTimeMillis();
+        output = ProjectUtils.runProject(project, new ArrayList<>());
+        System.out.println("output: " + output);
+        total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total + "\n");
+
+        // Attempt 3
+        System.out.println("Compile, code gen and execute with changes");
+        System.out.println("-------------------------------------------");
+        start = System.currentTimeMillis();
+        output = ProjectUtils.runProject(project,
+                Arrays.asList(project.sourceRoot() + "/main.bal"));
+        System.out.println("output: " + output);
+        total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total + "\n");
 
     }
 

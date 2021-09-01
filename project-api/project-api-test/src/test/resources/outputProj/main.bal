@@ -2,9 +2,15 @@
 import ballerina/jballerina.java;
 
 // Prints `Hello World`.
+int count = 0;
 
 public function main() {
-    print("hello latest");
+    incrementedcount();
+    print("hello " + count.toString());
+}
+
+function incrementedcount(){
+    count = count + 1;
 }
 
 //Extern methods to verify no errors while testing
