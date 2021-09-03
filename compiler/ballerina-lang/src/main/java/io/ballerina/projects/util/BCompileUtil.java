@@ -17,9 +17,19 @@
 package io.ballerina.projects.util;
 
 import io.ballerina.projects.JBallerinaBackend;
+import io.ballerina.projects.JarLibrary;
 import io.ballerina.projects.JvmTarget;
 import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageCompilation;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Utility methods for compile Ballerina files.
@@ -39,7 +49,6 @@ public class BCompileUtil {
         start = System.currentTimeMillis();
         JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
         BRunUtil.jarLibraries = jBallerinaBackend.jarResolver().getJarFilePathsRequiredForExecution();
-        BRunUtil.jBallerinaBackend = jBallerinaBackend;
         System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
         return jBallerinaBackend;
     }
@@ -56,4 +65,20 @@ public class BCompileUtil {
         return null;
     }
 
+    static URLClassLoader createClassLoader(Collection<JarLibrary> jarFiles, List<String> changedFileList) {
+        List<URL> urlList = new ArrayList<>(jarFiles.size());
+        for (JarLibrary jarFile : jarFiles) {
+            try {
+                urlList.add(jarFile.path().toUri().toURL());
+            } catch (MalformedURLException e) {
+                ContentServer.getInstance().sendMessage("Failed to create classloader with updated jar files" + e.getMessage());
+            }
+        }
+
+        // TODO use the ClassLoader.getPlatformClassLoader() here
+        return AccessController.doPrivileged(
+                (PrivilegedAction<URLClassLoader>) () -> new URLClassLoader(urlList.toArray(new URL[0]),
+                        ClassLoader.getSystemClassLoader())
+        );
+    }
 }

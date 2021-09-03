@@ -10,7 +10,7 @@ public function main() {
     while true {
         incrementedcount();
         print("hello " + count.toString());
-        runtime:sleep(10);
+        runtime:sleep(2);
     }
 }
 
