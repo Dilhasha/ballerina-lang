@@ -18,8 +18,11 @@
 
 package io.ballerina.projects.util;
 
+import io.ballerina.projects.JBallerinaBackend;
 import io.ballerina.projects.JarResolver;
+import io.ballerina.projects.JvmTarget;
 import io.ballerina.projects.Package;
+import io.ballerina.projects.PackageCompilation;
 import io.ballerina.projects.PackageManifest;
 import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
@@ -56,22 +59,45 @@ public class BRunUtil {
     public static Class<?> configClazz;
     public static Class<?> initClazz;
     public static boolean classLoaded = false;
+    public static JBallerinaBackend jBalBackend;
 
     public static void run(Project project, List<String> changedFileList) {
         Package currentPackage = project.currentPackage();
-        // Skip class loading if there are no changes and classes are already loaded
+        ClassLoader classLoader = null;
         if (!changedFileList.isEmpty() || !classLoaded) {
-            CompileResult compileResult = BCompileUtil.compile(currentPackage);
-            if (compileResult.getErrorCount() != 0) {
-                ContentServer.getInstance().sendMessage("Error during project compilation");
+            //Compile
+            long start = System.currentTimeMillis();
+            currentPackage.getResolution();
+            System.out.println("packageResolutionDuration: " + (System.currentTimeMillis() - start));
+            start = System.currentTimeMillis();
+            PackageCompilation packageCompilation = currentPackage.getCompilation();
+            System.out.println("packageCompilationDuration: " + (System.currentTimeMillis() - start));
+            if (packageCompilation.diagnosticResult().hasErrors()) {
+                ContentServer.getInstance().sendMessage("Compilation failed with errors: " +
+                        currentPackage.project().sourceRoot());
+                return;
             }
-            updateClassLoaders(compileResult, changedFileList, project.sourceRoot().toString());
+            //Codegen
+            start = System.currentTimeMillis();
+            JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
+            System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
+            if(jBallerinaBackend.diagnosticResult().hasErrors()){
+                ContentServer.getInstance().sendMessage("Code generation failed with errors: " +
+                        currentPackage.project().sourceRoot());
+                return;
+            }
+            classLoader = jBallerinaBackend.jarResolver().getClassLoaderWithRequiredJarFilesForExecution();
+            if (classLoader != null) {
+                updateClassLoaders(classLoader, currentPackage.manifest());
+                executeMain();
+            }
+        } else {
+            // Skip class loading if there are no changes and classes are already loaded
+            executeMain();
         }
-        executeMain();
     }
 
-    private static void updateClassLoaders(CompileResult compileResult, List<String> changedFileList, String projectPath) {
-        PackageManifest packageManifest = compileResult.packageManifest();
+    private static void updateClassLoaders(ClassLoader classLoader, PackageManifest packageManifest) {
         String org = packageManifest.org().toString();
         String module = packageManifest.name().toString();
         String version = packageManifest.version().toString();
@@ -79,13 +105,12 @@ public class BRunUtil {
         String mainClassName = JarResolver.getQualifiedClassName(org, module, version, MAIN_CLASS_NAME);
         String configClassName = JarResolver.getQualifiedClassName(org, module, version, CONFIGURATION_CLASS_NAME);
         try {
-            initClazz = compileResult.getClassLoader().loadClass(initClassName);
-            mainClazz = compileResult.getClassLoader().loadClass(mainClassName);
-            configClazz = compileResult.getClassLoader().loadClass(configClassName);
+            initClazz = classLoader.loadClass(initClassName);
+            mainClazz = classLoader.loadClass(mainClassName);
+            configClazz = classLoader.loadClass(configClassName);
         } catch (ClassNotFoundException e) {
-            ContentServer.getInstance().sendMessage("Error while loading methods of " + compileResult.projectSourceRoot() +  e.getMessage());
+            ContentServer.getInstance().sendMessage("Error while loading classes for execution. " +  e.getMessage());
             return;
-            //throw new RuntimeException("error while invoking init method of " + compileResult.projectSourceRoot(), e);
         }
         classLoaded = true;
     }

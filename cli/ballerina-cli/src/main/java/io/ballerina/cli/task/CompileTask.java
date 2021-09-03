@@ -26,6 +26,7 @@ import io.ballerina.projects.PackageCompilation;
 import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
 import io.ballerina.projects.directory.SingleFileProject;
+import io.ballerina.projects.util.BRunUtil;
 import org.ballerinalang.central.client.CentralClientConstants;
 
 import java.io.PrintStream;
@@ -81,6 +82,7 @@ public class CompileTask implements Task {
             if (project.buildOptions().dumpBuildTime()) {
                 BuildTime.getInstance().codeGenDuration = System.currentTimeMillis() - start;
             }
+            BRunUtil.jBalBackend = jBallerinaBackend;
             DiagnosticResult diagnosticResult = jBallerinaBackend.diagnosticResult();
             diagnosticResult.diagnostics(false).forEach(d -> err.println(d.toString()));
             if (diagnosticResult.hasErrors()) {

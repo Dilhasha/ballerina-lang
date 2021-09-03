@@ -189,6 +189,14 @@ public class JarResolver {
         return classLoaderWithAllJars;
     }
 
+    public ClassLoader getClassLoaderWithRequiredJarFilesForExecution(Collection<JarLibrary> jarLibraries) {
+        if (classLoaderWithAllJars != null) {
+            return classLoaderWithAllJars;
+        }
+        classLoaderWithAllJars = createClassLoader(jarLibraries);
+        return classLoaderWithAllJars;
+    }
+
     public ClassLoader getClassLoaderWithRequiredJarFilesForTestExecution(ModuleName moduleName) {
         return createClassLoader(getJarFilePathsRequiredForTestExecution(moduleName));
     }

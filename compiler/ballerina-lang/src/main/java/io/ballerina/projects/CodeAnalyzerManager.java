@@ -60,7 +60,6 @@ class CodeAnalyzerManager {
         List<Diagnostic> reportedDiagnostics = new ArrayList<>();
         runSyntaxNodeAnalysisTasks(reportedDiagnostics);
         runCompilationAnalysisTasks(reportedDiagnostics);
-
         // Returning the reported the diagnostics for now.
         // We need to return AnalyzerTaskResult later
         return reportedDiagnostics;

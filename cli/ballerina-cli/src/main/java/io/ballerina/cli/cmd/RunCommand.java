@@ -21,7 +21,6 @@ package io.ballerina.cli.cmd;
 import io.ballerina.cli.BLauncherCmd;
 import io.ballerina.cli.TaskExecutor;
 import io.ballerina.cli.task.CleanTargetDirTask;
-import io.ballerina.cli.task.CompileTask;
 import io.ballerina.cli.task.DumpBuildTimeTask;
 import io.ballerina.cli.task.ResolveMavenDependenciesTask;
 import io.ballerina.cli.task.RunExecutableTask;
@@ -97,6 +96,12 @@ public class RunCommand implements BLauncherCmd {
 
     @CommandLine.Option(names = "--generate-config-schema", hidden = true)
     private Boolean configSchemaGen;
+
+    @CommandLine.Option(names = "--with-changes", description = "")
+    private boolean withChanges;
+
+    @CommandLine.Option(names = "--process", description = "")
+    private boolean process;
 
     private static final String runCmd =
             "bal run [--debug <port>] <executable-jar> \n" +
@@ -196,9 +201,9 @@ public class RunCommand implements BLauncherCmd {
         TaskExecutor taskExecutor = new TaskExecutor.TaskBuilder()
                 .addTask(new CleanTargetDirTask(), isSingleFileBuild)   // clean the target directory(projects only)
                 .addTask(new ResolveMavenDependenciesTask(outStream)) // resolve maven dependencies in Ballerina.toml
-                .addTask(new CompileTask(outStream, errStream)) // compile the modules
+//                .addTask(new CompileTask(outStream, errStream)) // compile the modules
 //                .addTask(new CopyResourcesTask(), isSingleFileBuild)
-                .addTask(new RunExecutableTask(args, outStream, errStream))
+                .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process))
                 .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
                 .build();
         taskExecutor.executeTasks(project);

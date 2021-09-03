@@ -114,13 +114,7 @@ public class ProjectUtils {
     private static final Pattern orgNamePattern = Pattern.compile("^[a-zA-Z0-9_]*$");
 
     public static void runProject(Project project, List<String> changedFileList){
-        // Clean target
-        try {
-            Target target = new Target(project.sourceRoot());
-            target.clean();
-        } catch (IOException | ProjectException e) {
-            throw new ProjectException("unable to clean the target directory: " + e.getMessage());
-        }
+        // Removed - clean target
         // Register subscriber to get responses
         Subscriber subscriber = new Subscriber();
         ContentServer.getInstance().registerSubscriber(subscriber);

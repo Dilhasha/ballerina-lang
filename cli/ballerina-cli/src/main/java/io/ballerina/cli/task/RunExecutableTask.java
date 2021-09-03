@@ -19,6 +19,8 @@
 package io.ballerina.cli.task;
 
 import io.ballerina.cli.launcher.RuntimePanicException;
+import io.ballerina.projects.Document;
+import io.ballerina.projects.DocumentId;
 import io.ballerina.projects.JBallerinaBackend;
 import io.ballerina.projects.JarLibrary;
 import io.ballerina.projects.JarResolver;
@@ -34,7 +36,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -54,6 +58,8 @@ public class RunExecutableTask implements Task {
     private final List<String> args;
     private final transient PrintStream out;
     private final transient PrintStream err;
+    private boolean withChanges;
+    private boolean process;
 
     /**
      * Create a task to run the executable. This requires {@link CreateExecutableTask} to be completed.
@@ -62,33 +68,73 @@ public class RunExecutableTask implements Task {
      * @param out output stream
      * @param err error stream
      */
-    public RunExecutableTask(String[] args, PrintStream out, PrintStream err) {
+    public RunExecutableTask(String[] args, PrintStream out, PrintStream err, boolean withChanges, boolean process) {
         this.args = Lists.of(args);
         this.out = out;
         this.err = err;
+        this.withChanges = withChanges;
+        this.process = process;
     }
 
     @Override
     public void execute(Project project) {
-
         out.println();
         out.println("Running executable");
         out.println();
-
         try {
             ProjectUtils.checkExecutePermission(project.sourceRoot());
         } catch (ProjectException e) {
             throw createLauncherException(e.getMessage());
         }
-
-        this.runGeneratedExecutable(project.currentPackage().getDefaultModule(), project);
+        if(this.process){
+            long start = System.currentTimeMillis();
+            this.runGeneratedExecutable(project.currentPackage().getDefaultModule(), project);
+            System.out.println("Separate process execution time(ms) : " + (System.currentTimeMillis() - start));
+        }else {
+            //Attempt 1
+            long start = System.currentTimeMillis();
+            ProjectUtils.runProject(project, new ArrayList<>());
+            System.out.println("Attempt 1: Total execution time " + (System.currentTimeMillis() - start));
+            if (this.withChanges) {
+                System.out.println("-----------------------------");
+                //Attempt 2
+                for (Module module : project.currentPackage().modules()) {
+                    String filePath;
+                    if (module.isDefaultModule()) {
+                        filePath = project.sourceRoot().toAbsolutePath() + "/hello.bal";
+                        DocumentId oldDocumentId = project.documentId(
+                                Paths.get(filePath));
+                        Document oldDocument = project.currentPackage().module(module.moduleId()).
+                                document(oldDocumentId);
+                        Document updatedDoc = oldDocument.modify().withContent("import ballerina/io;\n" +
+                                "function testFunc() {\n" +
+                                "    io:print(\"hello\");\n" +
+                                "}").apply();
+                        break;
+                    }
+                }
+                start = System.currentTimeMillis();
+                ProjectUtils.runProject(project, Arrays.asList(project.sourceRoot() + "/hello.bal"));
+                System.out.println("Attempt 2: Total execution time " + (System.currentTimeMillis() - start));
+                // Attempt 3
+                System.out.println("-----------------------------");
+                start = System.currentTimeMillis();
+                ProjectUtils.runProject(project, new ArrayList<>());
+                System.out.println("Attempt 3: Total execution time " + (System.currentTimeMillis() - start));
+            }
+        }
     }
 
     private void runGeneratedExecutable(Module executableModule, Project project) {
+        long start = System.currentTimeMillis();
         PackageCompilation packageCompilation = project.currentPackage().getCompilation();
+        System.out.println("packageCompilationDuration: " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
         JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
+        System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
         JarResolver jarResolver = jBallerinaBackend.jarResolver();
 
+        start = System.currentTimeMillis();
         String initClassName = JarResolver.getQualifiedClassName(
                 executableModule.packageInstance().packageOrg().toString(),
                 executableModule.packageInstance().packageName().toString(),
@@ -117,6 +163,7 @@ public class RunExecutableTask implements Task {
         } catch (IOException | InterruptedException e) {
             throw createLauncherException("Error occurred while running the executable ", e.getCause());
         }
+        System.out.println("execution time: " + (System.currentTimeMillis() - start));
     }
 
     private String getAllClassPaths(JarResolver jarResolver) {

@@ -97,6 +97,49 @@ public class TestBuildProject extends BaseTest {
     private final String dummyContent = "function foo() {\n}";
 
     @Test
+    public void mytest(){
+        Path projectPath = RESOURCE_DIRECTORY.resolve("outproj3");
+
+        // Initialize the project instance - to demonstarte input to the `runProject` API
+        BuildProject project = null;
+        try {
+            project = BuildProject.load(projectPath);
+        } catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        //Attempt 1
+        long start = System.currentTimeMillis();
+        ProjectUtils.runProject(project, new ArrayList<>() );
+        System.out.println("Attempt 1: Total execution time " + (System.currentTimeMillis() - start));
+        //Attempt 2
+        // Load the project from document filepath
+        for (Module module:project.currentPackage().modules()) {
+            String filePath;
+            if(module.isDefaultModule()){
+                filePath = project.sourceRoot().toAbsolutePath()  + "/hello.bal";
+            }else{
+                filePath = project.sourceRoot().toAbsolutePath()  + "/modules/" + module.moduleName().moduleNamePart() + "/hello.bal";
+            }
+            DocumentId oldDocumentId = project.documentId(
+                    Paths.get(filePath));
+            Document oldDocument = project.currentPackage().module(module.moduleId()).document(oldDocumentId);
+            Document updatedDoc = oldDocument.modify().withContent("import ballerina/io;\n" +
+                    "function testFunc() {\n" +
+                    "    io:print(\"hello\");\n" +
+                    "}").apply();
+        }
+
+        start = System.currentTimeMillis();
+        ProjectUtils.runProject(project, Arrays.asList(project.sourceRoot() + "/hello.bal"));
+        System.out.println("Attempt 2: Total execution time " + (System.currentTimeMillis() - start));
+
+        // Attempt 3
+        System.out.println("-----------------------------");
+        start = System.currentTimeMillis();
+        ProjectUtils.runProject(project, new ArrayList<>());
+        System.out.println("Attempt 3: Total execution time " + (System.currentTimeMillis() - start));
+    }
+    @Test
     public void testProjectRun(){
         Path projectPath = RESOURCE_DIRECTORY.resolve("outputProj");
 
@@ -118,25 +161,39 @@ public class TestBuildProject extends BaseTest {
         System.out.println("totalDuration: " + total + "\n");
 
         // Attempt 2
+        Path filePath = projectPath.resolve("main.bal").toAbsolutePath();
+        // Load the project from document filepath
+        DocumentId oldDocumentId = project.documentId(filePath); // get the document ID
+        Module oldModule = project.currentPackage().module(oldDocumentId.moduleId());
+        Document oldDocument = oldModule.document(oldDocumentId);
+        // Update the document
+        Document updatedDoc = oldDocument.modify().withContent("import ballerina/io;\n" +
+                "\n" +
+                "int count = 0;\n" +
+                "\n" +
+                "public function main() {\n" +
+                "    incrementedcount();\n" +
+                "    incrementedcount();\n" +
+                "    io:println(\"hello \" + count.toString());\n" +
+                "}\n" +
+                "\n" +
+                "function incrementedcount(){\n" +
+                "    count = count + 1;\n" +
+                "}").apply();
+        System.out.println("Compile, code gen and execute with changes");
+        System.out.println("-------------------------------------------");
+        start = System.currentTimeMillis();
+        ProjectUtils.runProject(project, Arrays.asList(project.sourceRoot() + "/main.bal"));
+        total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total + "\n");
+
+        // Attempt 3
         System.out.println("Only execute already loaded classes when no changes done");
         System.out.println("-----------------------------");
         start = System.currentTimeMillis();
-
         ProjectUtils.runProject(project, new ArrayList<>());
-
         total = System.currentTimeMillis() - start;
         System.out.println("totalDuration: " + total + "\n");
-//
-//        // Attempt 3
-//        System.out.println("Compile, code gen and execute with changes");
-//        System.out.println("-------------------------------------------");
-//        start = System.currentTimeMillis();
-//        output = ProjectUtils.runProject(project,
-//                Arrays.asList(project.sourceRoot() + "/main.bal"));
-//        System.out.println("output: " + output);
-//        total = System.currentTimeMillis() - start;
-//        System.out.println("totalDuration: " + total + "\n");
-
     }
 
     @Test (description = "tests loading a valid build project")
