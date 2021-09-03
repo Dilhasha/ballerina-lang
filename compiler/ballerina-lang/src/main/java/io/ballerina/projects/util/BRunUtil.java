@@ -18,6 +18,8 @@
 
 package io.ballerina.projects.util;
 
+import io.ballerina.projects.JBallerinaBackend;
+import io.ballerina.projects.JarLibrary;
 import io.ballerina.projects.JarResolver;
 import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageManifest;
@@ -38,6 +40,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
@@ -56,22 +59,63 @@ public class BRunUtil {
     public static Class<?> configClazz;
     public static Class<?> initClazz;
     public static boolean classLoaded = false;
+    public static Collection<JarLibrary> jarLibraries;
+    public static JBallerinaBackend jBallerinaBackend;
+    public static PackageManifest packageManifest;
 
     public static void run(Project project, List<String> changedFileList) {
         Package currentPackage = project.currentPackage();
+        PackageManifest packageManifest = null;
+        ClassLoader classLoader = null;
         // Skip class loading if there are no changes and classes are already loaded
         if (!changedFileList.isEmpty() || !classLoaded) {
-            CompileResult compileResult = BCompileUtil.compile(currentPackage);
-            if (compileResult.getErrorCount() != 0) {
-                ContentServer.getInstance().sendMessage("Error during project compilation");
+            if (changedFileList.isEmpty()) {
+                CompileResult compileResult = getCompileResult(currentPackage, false);
+                if(compileResult!=null) {
+                    classLoader = compileResult.getClassLoader();
+                    packageManifest = compileResult.packageManifest();
+                }
+            } else {
+                CompileResult compileResult;
+                if (jarLibraries != null && jBallerinaBackend != null) {
+                    compileResult = getCompileResult(currentPackage, true);
+                    //Update jar libraries
+                    if (compileResult != null) {
+                        classLoader = compileResult.getClassLoader(jarLibraries);
+                    }
+                } else {
+                    compileResult = getCompileResult(currentPackage, false);
+                    if (compileResult != null) {
+                        classLoader = compileResult.getClassLoader();
+                    }
+                }
+                if (compileResult != null) {
+                    packageManifest = compileResult.packageManifest();
+                }
             }
-            updateClassLoaders(compileResult, changedFileList, project.sourceRoot().toString());
+            if (classLoader != null && packageManifest != null) {
+                updateClassLoaders(classLoader, packageManifest, changedFileList, project.sourceRoot().toString());
+            }
         }
-        executeMain();
+        if(classLoader!=null) {
+            executeMain();
+        }
     }
 
-    private static void updateClassLoaders(CompileResult compileResult, List<String> changedFileList, String projectPath) {
-        PackageManifest packageManifest = compileResult.packageManifest();
+    private static CompileResult getCompileResult(Package currentPackage, boolean useExistingBackend) {
+        CompileResult compileResult;
+        if (useExistingBackend) {
+            compileResult = new CompileResult(currentPackage, jBallerinaBackend);
+        } else {
+            compileResult = BCompileUtil.compile(currentPackage);
+            if (compileResult!=null && compileResult.getErrorCount() != 0) {
+                ContentServer.getInstance().sendMessage("Error during project compilation");
+            }
+        }
+        return compileResult;
+    }
+
+    private static void updateClassLoaders(ClassLoader classLoader, PackageManifest packageManifest, List<String> changedFileList, String projectPath) {
         String org = packageManifest.org().toString();
         String module = packageManifest.name().toString();
         String version = packageManifest.version().toString();
@@ -79,11 +123,11 @@ public class BRunUtil {
         String mainClassName = JarResolver.getQualifiedClassName(org, module, version, MAIN_CLASS_NAME);
         String configClassName = JarResolver.getQualifiedClassName(org, module, version, CONFIGURATION_CLASS_NAME);
         try {
-            initClazz = compileResult.getClassLoader().loadClass(initClassName);
-            mainClazz = compileResult.getClassLoader().loadClass(mainClassName);
-            configClazz = compileResult.getClassLoader().loadClass(configClassName);
+            initClazz = classLoader.loadClass(initClassName);
+            mainClazz = classLoader.loadClass(mainClassName);
+            configClazz = classLoader.loadClass(configClassName);
         } catch (ClassNotFoundException e) {
-            ContentServer.getInstance().sendMessage("Error while loading methods of " + compileResult.projectSourceRoot() +  e.getMessage());
+            ContentServer.getInstance().sendMessage("Error while loading classes for execution. " +  e.getMessage());
             return;
             //throw new RuntimeException("error while invoking init method of " + compileResult.projectSourceRoot(), e);
         }

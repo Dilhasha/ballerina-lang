@@ -86,6 +86,14 @@ public class CompileResult {
         return classLoader;
     }
 
+    public ClassLoader getClassLoader(Collection<JarLibrary> jarLibraries) {
+        if (classLoader != null) {
+            return classLoader;
+        }
+        classLoader = jBallerinaBackend.jarResolver().getClassLoaderWithRequiredJarFilesForExecution(jarLibraries);
+        return classLoader;
+    }
+
     public Diagnostic[] getDiagnostics() {
         return this.diagnostics;
     }

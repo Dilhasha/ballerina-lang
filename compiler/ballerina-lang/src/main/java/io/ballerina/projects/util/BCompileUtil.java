@@ -20,7 +20,6 @@ import io.ballerina.projects.JBallerinaBackend;
 import io.ballerina.projects.JvmTarget;
 import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageCompilation;
-import io.ballerina.projects.ProjectException;
 
 /**
  * Utility methods for compile Ballerina files.
@@ -33,21 +32,28 @@ public class BCompileUtil {
         PackageCompilation packageCompilation = currentPackage.getCompilation();
         System.out.println("packageCompilationDuration: " + (System.currentTimeMillis() - start));
         if (packageCompilation.diagnosticResult().errorCount() > 0) {
-            new ProjectException("compilation failed with errors: " + currentPackage.project().sourceRoot());
+            ContentServer.getInstance().sendMessage("Compilation failed with errors: " +
+                    currentPackage.project().sourceRoot());
+            return null;
         }
         start = System.currentTimeMillis();
         JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
+        BRunUtil.jarLibraries = jBallerinaBackend.jarResolver().getJarFilePathsRequiredForExecution();
+        BRunUtil.jBallerinaBackend = jBallerinaBackend;
         System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
         return jBallerinaBackend;
     }
 
     public static CompileResult compile(Package currentPackage) {
         JBallerinaBackend jBallerinaBackend = jBallerinaBackend(currentPackage);
-        if (jBallerinaBackend.diagnosticResult().hasErrors()) {
-            return new CompileResult(currentPackage, jBallerinaBackend);
+        if(jBallerinaBackend != null) {
+            if (jBallerinaBackend.diagnosticResult().hasErrors()) {
+                return new CompileResult(currentPackage, jBallerinaBackend);
+            }
+            CompileResult compileResult = new CompileResult(currentPackage, jBallerinaBackend);
+            return compileResult;
         }
-        CompileResult compileResult = new CompileResult(currentPackage, jBallerinaBackend);
-        return compileResult;
+        return null;
     }
 
 }

@@ -121,16 +121,15 @@ public class TestBuildProject extends BaseTest {
 
         total = System.currentTimeMillis() - start;
         System.out.println("totalDuration: " + total + "\n");
-//
-//        // Attempt 3
-//        System.out.println("Compile, code gen and execute with changes");
-//        System.out.println("-------------------------------------------");
-//        start = System.currentTimeMillis();
-//        output = ProjectUtils.runProject(project,
-//                Arrays.asList(project.sourceRoot() + "/main.bal"));
-//        System.out.println("output: " + output);
-//        total = System.currentTimeMillis() - start;
-//        System.out.println("totalDuration: " + total + "\n");
+
+        // Attempt 3
+        System.out.println("Compile, code gen and execute with changes");
+        System.out.println("-------------------------------------------");
+        start = System.currentTimeMillis();
+        ProjectUtils.runProject(project,
+                Arrays.asList(project.sourceRoot() + "/main.bal"));
+        total = System.currentTimeMillis() - start;
+        System.out.println("totalDuration: " + total + "\n");
 
     }
 
