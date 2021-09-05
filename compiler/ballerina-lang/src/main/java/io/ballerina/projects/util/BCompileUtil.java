@@ -48,7 +48,7 @@ public class BCompileUtil {
         }
         start = System.currentTimeMillis();
         JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
-        BRunUtil.jarLibraries = jBallerinaBackend.jarResolver().getJarFilePathsRequiredForExecution();
+        BRunUtil.jBalBackend = jBallerinaBackend;
         System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
         return jBallerinaBackend;
     }

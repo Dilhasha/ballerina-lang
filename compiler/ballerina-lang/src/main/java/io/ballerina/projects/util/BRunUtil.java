@@ -19,7 +19,6 @@
 package io.ballerina.projects.util;
 
 import io.ballerina.projects.JBallerinaBackend;
-import io.ballerina.projects.JarLibrary;
 import io.ballerina.projects.JarResolver;
 import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageManifest;
@@ -40,7 +39,6 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
@@ -59,7 +57,7 @@ public class BRunUtil {
     public static Class<?> configClazz;
     public static Class<?> initClazz;
     public static boolean classLoaded = false;
-    public static Collection<JarLibrary> jarLibraries;
+    public static JBallerinaBackend jBalBackend;
 
     public static void run(Project project, List<String> changedFileList) {
         Package currentPackage = project.currentPackage();
@@ -74,9 +72,12 @@ public class BRunUtil {
             } else {
                 //When file changes are there
                 CompileResult compileResult;
-                if (jarLibraries != null) {
+                if (jBalBackend != null) {
+                    // compile before hand to demonstrate the behaviour
+                    compileResult = getCompileResult(currentPackage);
                     //Update class loader
-                    classLoader = BCompileUtil.createClassLoader(jarLibraries, changedFileList);
+                    compileResult = new CompileResult(currentPackage, jBalBackend);
+                    classLoader = compileResult.getClassLoader();
                 } else {
                     compileResult = getCompileResult(currentPackage);
                     if (compileResult != null) {
@@ -86,10 +87,10 @@ public class BRunUtil {
             }
             if (classLoader != null) {
                 updateClassLoaders(classLoader, currentPackage.manifest());
+                executeMain();
             }
-        }
-        // Skip class loading if there are no changes and classes are already loaded
-        if (classLoader != null) {
+        } else {
+            // Skip class loading if there are no changes and classes are already loaded
             executeMain();
         }
     }
