@@ -20,7 +20,9 @@ package io.ballerina.projects.util;
 
 import io.ballerina.projects.JBallerinaBackend;
 import io.ballerina.projects.JarResolver;
+import io.ballerina.projects.JvmTarget;
 import io.ballerina.projects.Package;
+import io.ballerina.projects.PackageCompilation;
 import io.ballerina.projects.PackageManifest;
 import io.ballerina.projects.Project;
 import io.ballerina.projects.ProjectException;
@@ -63,28 +65,28 @@ public class BRunUtil {
         Package currentPackage = project.currentPackage();
         ClassLoader classLoader = null;
         if (!changedFileList.isEmpty() || !classLoaded) {
-            if (changedFileList.isEmpty()) {
-                // When no file changes and classes are not loaded
-                CompileResult compileResult = getCompileResult(currentPackage);
-                if (compileResult != null) {
-                    classLoader = compileResult.getClassLoader();
-                }
-            } else {
-                //When file changes are there
-                CompileResult compileResult;
-                if (jBalBackend != null) {
-                    // compile before hand to demonstrate the behaviour
-                    compileResult = getCompileResult(currentPackage);
-                    //Update class loader
-                    compileResult = new CompileResult(currentPackage, jBalBackend);
-                    classLoader = compileResult.getClassLoader();
-                } else {
-                    compileResult = getCompileResult(currentPackage);
-                    if (compileResult != null) {
-                        classLoader = compileResult.getClassLoader();
-                    }
-                }
+            //Compile
+            long start = System.currentTimeMillis();
+            currentPackage.getResolution();
+            System.out.println("packageResolutionDuration: " + (System.currentTimeMillis() - start));
+            start = System.currentTimeMillis();
+            PackageCompilation packageCompilation = currentPackage.getCompilation();
+            System.out.println("packageCompilationDuration: " + (System.currentTimeMillis() - start));
+            if (packageCompilation.diagnosticResult().hasErrors()) {
+                ContentServer.getInstance().sendMessage("Compilation failed with errors: " +
+                        currentPackage.project().sourceRoot());
+                return;
             }
+            //Codegen
+            start = System.currentTimeMillis();
+            JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
+            System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
+            if(jBallerinaBackend.diagnosticResult().hasErrors()){
+                ContentServer.getInstance().sendMessage("Code generation failed with errors: " +
+                        currentPackage.project().sourceRoot());
+                return;
+            }
+            classLoader = jBallerinaBackend.jarResolver().getClassLoaderWithRequiredJarFilesForExecution();
             if (classLoader != null) {
                 updateClassLoaders(classLoader, currentPackage.manifest());
                 executeMain();
@@ -93,14 +95,6 @@ public class BRunUtil {
             // Skip class loading if there are no changes and classes are already loaded
             executeMain();
         }
-    }
-
-    private static CompileResult getCompileResult(Package currentPackage) {
-        CompileResult compileResult = BCompileUtil.compile(currentPackage);
-        if (compileResult != null && compileResult.getErrorCount() != 0) {
-            ContentServer.getInstance().sendMessage("Error during project compilation");
-        }
-        return compileResult;
     }
 
     private static void updateClassLoaders(ClassLoader classLoader, PackageManifest packageManifest) {

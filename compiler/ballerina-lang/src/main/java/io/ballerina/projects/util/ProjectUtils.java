@@ -114,12 +114,12 @@ public class ProjectUtils {
 
     public static void runProject(Project project, List<String> changedFileList){
         // Clean target
-        try {
-            Target target = new Target(project.sourceRoot());
-            target.clean();
-        } catch (IOException | ProjectException e) {
-            throw new ProjectException("unable to clean the target directory: " + e.getMessage());
-        }
+//        try {
+//            Target target = new Target(project.sourceRoot());
+//            target.clean();
+//        } catch (IOException | ProjectException e) {
+//            throw new ProjectException("unable to clean the target directory: " + e.getMessage());
+//        }
         // Register subscriber to get responses
         Subscriber subscriber = new Subscriber();
         ContentServer.getInstance().registerSubscriber(subscriber);
