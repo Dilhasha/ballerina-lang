@@ -21,6 +21,7 @@ package io.ballerina.cli.cmd;
 import io.ballerina.cli.BLauncherCmd;
 import io.ballerina.cli.TaskExecutor;
 import io.ballerina.cli.task.CleanTargetDirTask;
+import io.ballerina.cli.task.CompileTask;
 import io.ballerina.cli.task.DumpBuildTimeTask;
 import io.ballerina.cli.task.ResolveMavenDependenciesTask;
 import io.ballerina.cli.task.RunExecutableTask;
@@ -198,14 +199,26 @@ public class RunCommand implements BLauncherCmd {
             }
         }
 
-        TaskExecutor taskExecutor = new TaskExecutor.TaskBuilder()
-                .addTask(new CleanTargetDirTask(), isSingleFileBuild)   // clean the target directory(projects only)
-                .addTask(new ResolveMavenDependenciesTask(outStream)) // resolve maven dependencies in Ballerina.toml
-//                .addTask(new CompileTask(outStream, errStream)) // compile the modules
+        TaskExecutor taskExecutor;
+        if (this.process) {
+            taskExecutor = new TaskExecutor.TaskBuilder()
+                    .addTask(new CleanTargetDirTask(), isSingleFileBuild)   // clean the target directory(projects only)
+                    .addTask(new ResolveMavenDependenciesTask(outStream)) // resolve maven dependencies in Ballerina.toml
+                    .addTask(new CompileTask(outStream, errStream)) // compile the modules
 //                .addTask(new CopyResourcesTask(), isSingleFileBuild)
-                .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process))
-                .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
-                .build();
+                    .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process))
+                    .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
+                    .build();
+        } else {
+            taskExecutor = new TaskExecutor.TaskBuilder()
+                    .addTask(new CleanTargetDirTask(), isSingleFileBuild)   // clean the target directory(projects only)
+                    .addTask(new ResolveMavenDependenciesTask(outStream)) // resolve maven dependencies in Ballerina.toml
+//                    .addTask(new CompileTask(outStream, errStream)) // compile the modules
+//                .addTask(new CopyResourcesTask(), isSingleFileBuild)
+                    .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process))
+                    .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
+                    .build();
+        }
         taskExecutor.executeTasks(project);
     }
 
