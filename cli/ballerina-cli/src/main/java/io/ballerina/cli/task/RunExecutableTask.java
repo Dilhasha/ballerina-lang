@@ -102,6 +102,12 @@ public class RunExecutableTask implements Task {
                     String filePath;
                     if (module.isDefaultModule()) {
                         filePath = project.sourceRoot().toAbsolutePath() + "/hello.bal";
+
+                    } else {
+                        filePath = project.sourceRoot().toAbsolutePath() + "/modules/" +
+                                module.moduleName().moduleNamePart() + "/hello.bal";
+                    }
+                    if (Paths.get(filePath).toFile().exists()) {
                         DocumentId oldDocumentId = project.documentId(
                                 Paths.get(filePath));
                         Document oldDocument = project.currentPackage().module(module.moduleId()).
@@ -110,7 +116,6 @@ public class RunExecutableTask implements Task {
                                 "function testFunc() {\n" +
                                 "    io:print(\"hello\");\n" +
                                 "}").apply();
-                        break;
                     }
                 }
                 start = System.currentTimeMillis();
