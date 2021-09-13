@@ -112,9 +112,8 @@ public class RunExecutableTask implements Task {
                                 Paths.get(filePath));
                         Document oldDocument = project.currentPackage().module(module.moduleId()).
                                 document(oldDocumentId);
-                        Document updatedDoc = oldDocument.modify().withContent("import ballerina/io;\n" +
-                                "function testFunc() {\n" +
-                                "    io:print(\"hello\");\n" +
+                        Document updatedDoc = oldDocument.modify().withContent("public function updateName() returns string {\n" +
+                                "    return \" Updated\";\n" +
                                 "}").apply();
                     }
                 }
