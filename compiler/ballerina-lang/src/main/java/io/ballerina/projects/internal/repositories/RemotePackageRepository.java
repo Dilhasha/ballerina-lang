@@ -11,6 +11,7 @@ import io.ballerina.projects.ProjectException;
 import io.ballerina.projects.SemanticVersion;
 import io.ballerina.projects.Settings;
 import io.ballerina.projects.environment.Environment;
+import io.ballerina.projects.environment.PackageLockingMode;
 import io.ballerina.projects.environment.PackageMetadataResponse;
 import io.ballerina.projects.environment.PackageRepository;
 import io.ballerina.projects.environment.ResolutionOptions;
@@ -242,25 +243,32 @@ public class RemotePackageRepository implements PackageRepository {
         if (options.offline()) {
             return cachedPackages;
         }
+        for (PackageMetadataResponse response : cachedPackages) {
+            if (response.packageLoadRequest().packageLockingMode().equals(PackageLockingMode.HARD)
+                    && response.resolutionStatus().equals(ResolutionResponse.ResolutionStatus.RESOLVED)) {
+                requests.remove(response.packageLoadRequest());
+            }
+        }
+        if (requests.size() > 0) {
+            // Resolve the requests from remote repository
+            try {
+                PackageResolutionRequest packageResolutionRequest = toPackageResolutionRequest(requests);
+                PackageResolutionResponse packageResolutionResponse = client.resolveDependencies(
+                        packageResolutionRequest, JvmTarget.JAVA_11.code(),
+                        RepoUtils.getBallerinaVersion(), true);
 
-        // Resolve the requests from remote repository
-        try {
-            PackageResolutionRequest packageResolutionRequest = toPackageResolutionRequest(requests);
-            PackageResolutionResponse packageResolutionResponse = client.resolveDependencies(
-                    packageResolutionRequest, JvmTarget.JAVA_11.code(),
-                    RepoUtils.getBallerinaVersion(), true);
+                Collection<PackageMetadataResponse> remotePackages =
+                        fromPackageResolutionResponse(requests, packageResolutionResponse);
+                // Merge central requests and local requests
+                // Here we will pick the latest package from remote or local
+                return mergeResolution(remotePackages, cachedPackages);
 
-            Collection<PackageMetadataResponse> remotePackages =
-                    fromPackageResolutionResponse(requests, packageResolutionResponse);
-            // Merge central requests and local requests
-            // Here we will pick the latest package from remote or local
-            return mergeResolution(remotePackages, cachedPackages);
-
-        } catch (ConnectionErrorException e) {
-            // ignore connect to remote repo failure
-            // TODO we need to add diagnostics for resolution errors
-        } catch (CentralClientException e) {
-            throw new ProjectException(e.getMessage());
+            } catch (ConnectionErrorException e) {
+                // ignore connect to remote repo failure
+                // TODO we need to add diagnostics for resolution errors
+            } catch (CentralClientException e) {
+                throw new ProjectException(e.getMessage());
+            }
         }
         // If any issue we will return cachedPackages results
         return cachedPackages;
