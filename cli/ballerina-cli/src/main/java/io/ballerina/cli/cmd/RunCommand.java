@@ -104,6 +104,9 @@ public class RunCommand implements BLauncherCmd {
     @CommandLine.Option(names = "--process", description = "")
     private boolean process;
 
+    @CommandLine.Option(names = "--api-process", description = "")
+    private boolean apiProcess;
+
     private static final String runCmd =
             "bal run [--debug <port>] <executable-jar> \n" +
             "    bal run [--experimental] [--offline]\n" +
@@ -206,7 +209,7 @@ public class RunCommand implements BLauncherCmd {
                     .addTask(new ResolveMavenDependenciesTask(outStream)) // resolve maven dependencies in Ballerina.toml
                     .addTask(new CompileTask(outStream, errStream)) // compile the modules
 //                .addTask(new CopyResourcesTask(), isSingleFileBuild)
-                    .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process))
+                    .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process, apiProcess))
                     .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
                     .build();
         } else {
@@ -215,7 +218,7 @@ public class RunCommand implements BLauncherCmd {
                     .addTask(new ResolveMavenDependenciesTask(outStream)) // resolve maven dependencies in Ballerina.toml
 //                    .addTask(new CompileTask(outStream, errStream)) // compile the modules
 //                .addTask(new CopyResourcesTask(), isSingleFileBuild)
-                    .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process))
+                    .addTask(new RunExecutableTask(args, outStream, errStream, withChanges, process, apiProcess))
                     .addTask(new DumpBuildTimeTask(outStream), !project.buildOptions().dumpBuildTime())
                     .build();
         }

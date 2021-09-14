@@ -60,6 +60,7 @@ public class RunExecutableTask implements Task {
     private final transient PrintStream err;
     private boolean withChanges;
     private boolean process;
+    private boolean apiProcess;
 
     /**
      * Create a task to run the executable. This requires {@link CreateExecutableTask} to be completed.
@@ -68,12 +69,14 @@ public class RunExecutableTask implements Task {
      * @param out output stream
      * @param err error stream
      */
-    public RunExecutableTask(String[] args, PrintStream out, PrintStream err, boolean withChanges, boolean process) {
+    public RunExecutableTask(String[] args, PrintStream out, PrintStream err, boolean withChanges, boolean process,
+                             boolean apiProcess) {
         this.args = Lists.of(args);
         this.out = out;
         this.err = err;
         this.withChanges = withChanges;
         this.process = process;
+        this.apiProcess = apiProcess;
     }
 
     @Override
@@ -93,7 +96,7 @@ public class RunExecutableTask implements Task {
         }else {
             //Attempt 1
             long start = System.currentTimeMillis();
-            ProjectUtils.runProject(project, new ArrayList<>());
+            ProjectUtils.runProject(project, new ArrayList<>(), this.apiProcess, args, err);
             System.out.println("Attempt 1: Total execution time " + (System.currentTimeMillis() - start));
             if (this.withChanges) {
                 System.out.println("-----------------------------");
@@ -118,12 +121,12 @@ public class RunExecutableTask implements Task {
                     }
                 }
                 start = System.currentTimeMillis();
-                ProjectUtils.runProject(project, Arrays.asList(project.sourceRoot() + "/hello.bal"));
+                ProjectUtils.runProject(project, Arrays.asList(project.sourceRoot() + "/hello.bal"), this.apiProcess, args, err);
                 System.out.println("Attempt 2: Total execution time " + (System.currentTimeMillis() - start));
                 // Attempt 3
                 System.out.println("-----------------------------");
                 start = System.currentTimeMillis();
-                ProjectUtils.runProject(project, new ArrayList<>());
+                ProjectUtils.runProject(project, new ArrayList<>(), this.apiProcess, args, err);
                 System.out.println("Attempt 3: Total execution time " + (System.currentTimeMillis() - start));
             }
         }

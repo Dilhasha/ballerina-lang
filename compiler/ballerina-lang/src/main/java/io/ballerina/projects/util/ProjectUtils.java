@@ -58,6 +58,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.Authenticator;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -113,13 +114,18 @@ public class ProjectUtils {
     private static final Pattern separatedIdentifierPattern = Pattern.compile("^[a-zA-Z0-9_.]*$");
     private static final Pattern orgNamePattern = Pattern.compile("^[a-zA-Z0-9_]*$");
 
-    public static void runProject(Project project, List<String> changedFileList){
+    public static void runProject(Project project, List<String> changedFileList, boolean apiProcess, List<String> args,
+                                  PrintStream err) {
         // Removed - clean target
         // Register subscriber to get responses
         Subscriber subscriber = new Subscriber();
         ContentServer.getInstance().registerSubscriber(subscriber);
         // Run the program
-        BRunUtil.run(project, changedFileList);
+        if (apiProcess) {
+            BRunUtil.runGeneratedExecutable(project, args, err);
+        } else {
+            BRunUtil.run(project, changedFileList);
+        }
     }
 
     /**

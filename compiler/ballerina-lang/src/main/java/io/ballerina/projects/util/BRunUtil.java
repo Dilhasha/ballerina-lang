@@ -19,8 +19,10 @@
 package io.ballerina.projects.util;
 
 import io.ballerina.projects.JBallerinaBackend;
+import io.ballerina.projects.JarLibrary;
 import io.ballerina.projects.JarResolver;
 import io.ballerina.projects.JvmTarget;
+import io.ballerina.projects.Module;
 import io.ballerina.projects.Package;
 import io.ballerina.projects.PackageCompilation;
 import io.ballerina.projects.PackageManifest;
@@ -37,12 +39,18 @@ import org.wso2.ballerinalang.compiler.desugar.ASTBuilderUtil;
 import org.wso2.ballerinalang.compiler.tree.BLangIdentifier;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.function.Function;
+
+import static org.wso2.ballerinalang.compiler.util.ProjectDirConstants.USER_DIR;
 
 /**
  * Utility methods for run Ballerina functions.
@@ -59,7 +67,54 @@ public class BRunUtil {
     public static Class<?> configClazz;
     public static Class<?> initClazz;
     public static boolean classLoaded = false;
-    public static JBallerinaBackend jBalBackend;
+
+
+    public static void runGeneratedExecutable(Project project, List<String> args, PrintStream err) {
+        Module executableModule = project.currentPackage().getDefaultModule();
+        long start = System.currentTimeMillis();
+        PackageCompilation packageCompilation = project.currentPackage().getCompilation();
+        System.out.println("packageCompilationDuration: " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+        JBallerinaBackend jBallerinaBackend = JBallerinaBackend.from(packageCompilation, JvmTarget.JAVA_11);
+        System.out.println("codeGenDuration: " + (System.currentTimeMillis() - start));
+        JarResolver jarResolver = jBallerinaBackend.jarResolver();
+
+        start = System.currentTimeMillis();
+        String initClassName = JarResolver.getQualifiedClassName(
+                executableModule.packageInstance().packageOrg().toString(),
+                executableModule.packageInstance().packageName().toString(),
+                executableModule.packageInstance().packageVersion().toString(),
+                MODULE_INIT_CLASS_NAME);
+        try {
+            List<String> commands = new ArrayList<>();
+            commands.add(System.getProperty("java.command"));
+            commands.add("-XX:+HeapDumpOnOutOfMemoryError");
+            commands.add("-XX:HeapDumpPath=" + System.getProperty(USER_DIR));
+            // Sets classpath with executable thin jar and all dependency jar paths.
+            commands.add("-cp");
+            commands.add(getAllClassPaths(jarResolver));
+            commands.add(initClassName);
+            commands.addAll(args);
+            ProcessBuilder pb = new ProcessBuilder(commands).inheritIO();
+            Process process = pb.start();
+            process.waitFor();
+            int exitValue = process.exitValue();
+            if (exitValue != 0) {
+                throw new ProjectException("Error occurred");
+            }
+        } catch (IOException | InterruptedException e) {
+            throw new ProjectException("Error occurred while running the executable ", e.getCause());
+        }
+        System.out.println("api process execution time: " + (System.currentTimeMillis() - start));
+    }
+
+    private static String getAllClassPaths(JarResolver jarResolver) {
+        StringJoiner cp = new StringJoiner(File.pathSeparator);
+        jarResolver.getJarFilePathsRequiredForExecution().stream()
+                .map(JarLibrary::path).map(Path::toString)
+                .forEach(cp::add);
+        return cp.toString();
+    }
 
     public static void run(Project project, List<String> changedFileList) {
         Package currentPackage = project.currentPackage();
@@ -122,6 +177,7 @@ public class BRunUtil {
         directRun(configClazz, "$configureInit",
                 new Class[]{String[].class, Path[].class, String.class}, new Object[]{new String[]{},
                         configurationDetails.paths, configurationDetails.configContent});
+        LaunchUtils.startListeners(false);
         try {
             runOnSchedule(initClazz, ASTBuilderUtil.createIdentifier(null, "$moduleInit"), scheduler);
             runOnSchedule(mainClazz, ASTBuilderUtil.createIdentifier(null, "main"), scheduler);
