@@ -39,7 +39,6 @@ import io.ballerina.projects.SemanticVersion;
 import io.ballerina.projects.Settings;
 import io.ballerina.projects.internal.model.BuildJson;
 import io.ballerina.projects.internal.model.Dependency;
-import io.ballerina.projects.internal.model.Target;
 import org.apache.commons.compress.archivers.jar.JarArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntryPredicate;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -114,7 +113,7 @@ public class ProjectUtils {
     private static final Pattern separatedIdentifierPattern = Pattern.compile("^[a-zA-Z0-9_.]*$");
     private static final Pattern orgNamePattern = Pattern.compile("^[a-zA-Z0-9_]*$");
 
-    public static void runProject(Project project, List<String> changedFileList, boolean apiProcess, List<String> args,
+    public static void runProject(Project project, boolean isChanged, boolean apiProcess, List<String> args,
                                   PrintStream err) {
         // Removed - clean target
         // Register subscriber to get responses
@@ -124,7 +123,7 @@ public class ProjectUtils {
         if (apiProcess) {
             BRunUtil.runGeneratedExecutable(project, args, err);
         } else {
-            BRunUtil.run(project, changedFileList);
+            BRunUtil.run(project, isChanged);
         }
     }
 

@@ -38,7 +38,6 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -58,9 +57,9 @@ public class RunExecutableTask implements Task {
     private final List<String> args;
     private final transient PrintStream out;
     private final transient PrintStream err;
-    private boolean withChanges;
-    private boolean process;
-    private boolean apiProcess;
+    private final boolean withChanges;
+    private final boolean process;
+    private final boolean apiProcess;
 
     /**
      * Create a task to run the executable. This requires {@link CreateExecutableTask} to be completed.
@@ -89,16 +88,16 @@ public class RunExecutableTask implements Task {
         } catch (ProjectException e) {
             throw createLauncherException(e.getMessage());
         }
-        if(this.process){
+        if (process) {
             long start = System.currentTimeMillis();
-            this.runGeneratedExecutable(project.currentPackage().getDefaultModule(), project);
+            runGeneratedExecutable(project.currentPackage().getDefaultModule(), project);
             System.out.println("Separate process execution time(ms) : " + (System.currentTimeMillis() - start));
-        }else {
+        } else {
             //Attempt 1
             long start = System.currentTimeMillis();
-            ProjectUtils.runProject(project, new ArrayList<>(), this.apiProcess, args, err);
+            ProjectUtils.runProject(project, false, apiProcess, args, err);
             System.out.println("Attempt 1: Total execution time " + (System.currentTimeMillis() - start));
-            if (this.withChanges) {
+            if (withChanges) {
                 System.out.println("-----------------------------");
                 //Attempt 2
                 for (Module module : project.currentPackage().modules()) {
@@ -121,12 +120,12 @@ public class RunExecutableTask implements Task {
                     }
                 }
                 start = System.currentTimeMillis();
-                ProjectUtils.runProject(project, Arrays.asList(project.sourceRoot() + "/hello.bal"), this.apiProcess, args, err);
+                ProjectUtils.runProject(project, true, apiProcess, args, err);
                 System.out.println("Attempt 2: Total execution time " + (System.currentTimeMillis() - start));
                 // Attempt 3
                 System.out.println("-----------------------------");
                 start = System.currentTimeMillis();
-                ProjectUtils.runProject(project, new ArrayList<>(), this.apiProcess, args, err);
+                ProjectUtils.runProject(project, false, apiProcess, args, err);
                 System.out.println("Attempt 3: Total execution time " + (System.currentTimeMillis() - start));
             }
         }
