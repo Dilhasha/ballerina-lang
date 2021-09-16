@@ -70,36 +70,38 @@ public class DefaultPackageResolver implements PackageResolver {
                                                                 ResolutionOptions options) {
         // We will only receive hierarchical imports in requests
         Collection<ImportModuleResponse> responseListInDist = distributionRepo.getPackageNames(requests, options);
-        Collection<ImportModuleResponse> responseListInCentral = centralRepo.getPackageNames(requests, options);
-
-        return new ArrayList<>(
-                Stream.of(responseListInDist, responseListInCentral)
-                        .flatMap(Collection::stream).collect(Collectors.toMap(
-                        ImportModuleResponse::importModuleRequest, Function.identity(),
-                        (ImportModuleResponse x, ImportModuleResponse y) -> {
-                            if (y.resolutionStatus().equals(ResolutionStatus.UNRESOLVED)) {
-                                return x;
-                            }
-                            if (x.resolutionStatus().equals(ResolutionStatus.UNRESOLVED)) {
-                                return y;
-                            }
-                            if (!x.packageDescriptor().name().equals(y.packageDescriptor().name())) {
-                                ResolutionRequest resolutionRequest = ResolutionRequest
-                                        .from(y.packageDescriptor(), PackageDependencyScope.DEFAULT);
-                                Collection<PackageVersion> packageVersions =
-                                        distributionRepo.getPackageVersions(resolutionRequest, options);
-                                // If module exists in both repos, then we check if a newer version of
-                                // y (package in central) in dist repo.
-                                // If yes, we assume that the latest version of y does not contain the
-                                // module. Hence, return x.
-                                // Else, there is no newer package of y in dist. We assume that there exist a newer
-                                // version of x in central which does not have this module. Hence, return y.
-                                if (packageVersions.isEmpty()) {
+        if (!options.offline()) {
+            Collection<ImportModuleResponse> responseListInCentral = centralRepo.getPackageNames(requests, options);
+            return new ArrayList<>(
+                    Stream.of(responseListInDist, responseListInCentral)
+                            .flatMap(Collection::stream).collect(Collectors.toMap(
+                            ImportModuleResponse::importModuleRequest, Function.identity(),
+                            (ImportModuleResponse x, ImportModuleResponse y) -> {
+                                if (y.resolutionStatus().equals(ResolutionStatus.UNRESOLVED)) {
+                                    return x;
+                                }
+                                if (x.resolutionStatus().equals(ResolutionStatus.UNRESOLVED)) {
                                     return y;
                                 }
-                            }
-                            return x;
-                        })).values());
+                                if (!x.packageDescriptor().name().equals(y.packageDescriptor().name())) {
+                                    ResolutionRequest resolutionRequest = ResolutionRequest
+                                            .from(y.packageDescriptor(), PackageDependencyScope.DEFAULT);
+                                    Collection<PackageVersion> packageVersions =
+                                            distributionRepo.getPackageVersions(resolutionRequest, options);
+                                    // If module exists in both repos, then we check if a newer version of
+                                    // y (package in central) in dist repo.
+                                    // If yes, we assume that the latest version of y does not contain the
+                                    // module. Hence, return x.
+                                    // Else, there is no newer package of y in dist. We assume that there exist a newer
+                                    // version of x in central which does not have this module. Hence, return y.
+                                    if (packageVersions.isEmpty()) {
+                                        return y;
+                                    }
+                                }
+                                return x;
+                            })).values());
+        }
+        return responseListInDist;
     }
 
     @Override
