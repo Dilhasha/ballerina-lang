@@ -17,6 +17,7 @@
  */
 package io.ballerina.projects;
 
+import io.ballerina.projects.configurations.ConfigTomlBuilder;
 import io.ballerina.projects.environment.PackageCache;
 import io.ballerina.projects.environment.ProjectEnvironment;
 import io.ballerina.projects.internal.DefaultDiagnosticResult;
@@ -145,7 +146,9 @@ public class JBallerinaBackend extends CompilerBackend {
         if (codeGenCompleted) {
             return;
         }
-
+        // Generate config.toml if configurables are available
+        ConfigTomlBuilder.build(this.packageContext.getPackageCompilation(), this.packageContext().moduleIds(),
+                this.packageContext().project().currentPackage());
         List<Diagnostic> diagnostics = new ArrayList<>();
         // add package resolution diagnostics
         diagnostics.addAll(this.packageContext.getResolution().diagnosticResult().allDiagnostics);
@@ -167,7 +170,6 @@ public class JBallerinaBackend extends CompilerBackend {
         diagnostics.addAll(moduleDiagnostics);
         // add plugin diagnostics
         diagnostics.addAll(this.packageContext.getPackageCompilation().pluginDiagnostics());
-
         this.diagnosticResult = new DefaultDiagnosticResult(diagnostics);
         codeGenCompleted = true;
     }
