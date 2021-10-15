@@ -378,7 +378,7 @@ public class BuildProject extends Project {
         }
     }
 
-    private static void writeContent(Path filePath, String content) {
+    public static void writeContent(Path filePath, String content) {
         try {
             Files.write(filePath, Collections.singleton(content));
         } catch (IOException e) {

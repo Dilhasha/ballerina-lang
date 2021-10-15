@@ -17,6 +17,7 @@
  */
 package io.ballerina.projects;
 
+import io.ballerina.projects.configurations.ConfigTomlBuilder;
 import io.ballerina.projects.environment.PackageCache;
 import io.ballerina.projects.environment.ProjectEnvironment;
 import io.ballerina.projects.internal.DefaultDiagnosticResult;
@@ -37,10 +38,13 @@ import org.ballerinalang.maven.exceptions.MavenResolverException;
 import org.wso2.ballerinalang.compiler.CompiledJarFile;
 import org.wso2.ballerinalang.compiler.bir.codegen.CodeGenerator;
 import org.wso2.ballerinalang.compiler.bir.codegen.interop.InteropValidator;
+import org.wso2.ballerinalang.compiler.bir.model.BIRNode;
 import org.wso2.ballerinalang.compiler.semantics.analyzer.ObservabilitySymbolCollectorRunner;
+import org.wso2.ballerinalang.compiler.semantics.model.symbols.Symbols;
 import org.wso2.ballerinalang.compiler.spi.ObservabilitySymbolCollector;
 import org.wso2.ballerinalang.compiler.tree.BLangPackage;
 import org.wso2.ballerinalang.compiler.util.CompilerContext;
+import org.wso2.ballerinalang.util.Flags;
 import org.wso2.ballerinalang.util.Lists;
 
 import java.io.BufferedInputStream;
@@ -299,6 +303,12 @@ public class JBallerinaBackend extends CompilerBackend {
             return;
         }
         CompiledJarFile compiledJarFile = jvmCodeGenerator.generate(bLangPackage);
+        // Dump configs
+        if (Boolean.parseBoolean(System.getenv("DUMP_CONFIGS"))) {
+            ConfigTomlBuilder.dumpConfigToml(this.packageContext().project().sourceRoot(),
+                    moduleContext.moduleName().toString(),
+                    bLangPackage);
+        }
         String jarFileName = getJarFileName(moduleContext) + JAR_FILE_NAME_SUFFIX;
         try {
             ByteArrayOutputStream byteStream = JarWriter.write(compiledJarFile);

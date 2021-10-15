@@ -177,11 +177,14 @@ public class ConfigMethodGen {
                 mv.visitFieldInsn(GETSTATIC, moduleClass, CURRENT_MODULE_VAR_NAME,
                         "L" + MODULE + ";");
                 mv.visitLdcInsn(globalVar.name.value);
+                System.out.println("ConfigCodeGen - config var name - " + globalVar.name.value);
                 jvmTypeGen.loadType(mv, globalVar.type);
                 mv.visitLdcInsn(getOneBasedLocationString(module, globalVar.pos));
                 if (Symbols.isFlagOn(globalVarFlags, Flags.REQUIRED)) {
+                    System.out.println("ConfigCodeGen - config var val - " + ICONST_1);
                     mv.visitInsn(ICONST_1);
                 } else {
+                    System.out.println("ConfigCodeGen - config var val - " + ICONST_0);
                     mv.visitInsn(ICONST_0);
                 }
                 mv.visitMethodInsn(INVOKESPECIAL, VARIABLE_KEY, JVM_INIT_METHOD, String.format("(L%s;L%s;L%s;L%s;Z)V",
