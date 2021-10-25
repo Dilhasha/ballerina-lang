@@ -305,9 +305,10 @@ public class JBallerinaBackend extends CompilerBackend {
         CompiledJarFile compiledJarFile = jvmCodeGenerator.generate(bLangPackage);
         // Dump configs
         if (Boolean.parseBoolean(System.getenv("DUMP_CONFIGS"))) {
-            ConfigTomlBuilder.dumpConfigToml(this.packageContext().project().sourceRoot(),
-                    moduleContext.moduleName().toString(),
-                    bLangPackage);
+//            ConfigTomlBuilder.dumpConfigToml(this.packageContext().project().sourceRoot(),
+//                    moduleContext.moduleName().toString(),
+//                    bLangPackage);
+//            ConfigTomlBuilder.validateToml();
         }
         String jarFileName = getJarFileName(moduleContext) + JAR_FILE_NAME_SUFFIX;
         try {

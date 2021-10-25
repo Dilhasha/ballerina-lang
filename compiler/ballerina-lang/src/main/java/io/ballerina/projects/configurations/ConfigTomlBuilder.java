@@ -1,8 +1,12 @@
 package io.ballerina.projects.configurations;
 
 import io.ballerina.projects.ProjectException;
+import io.ballerina.projects.TomlDocument;
+import io.ballerina.projects.util.FileUtils;
 import io.ballerina.projects.util.ProjectConstants;
-import io.ballerina.runtime.internal.TypeChecker;
+import io.ballerina.toml.validator.TomlValidator;
+import io.ballerina.toml.validator.schema.Schema;
+import org.ballerinalang.model.elements.PackageID;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode;
 import org.wso2.ballerinalang.compiler.semantics.model.Scope;
 import org.wso2.ballerinalang.compiler.semantics.model.symbols.BSymbol;
@@ -38,9 +42,26 @@ public class ConfigTomlBuilder {
         }
     }
 
+    public static void validateToml(){
+        TomlDocument configToml = TomlDocument.from(CONFIGURATION_TOML, "[mymock.foo]\n" +
+                "testMode = true");
+
+        TomlValidator ballerinaTomlValidator;
+        try {
+            ballerinaTomlValidator = new TomlValidator(
+                    Schema.from(FileUtils.readFileAsString("config-toml-schema.json")));
+        } catch (IOException e) {
+            throw new ProjectException("Failed to read the Ballerina.toml validator schema file.");
+        }
+
+        // Validate ballerinaToml using ballerina toml schema
+        ballerinaTomlValidator.validate(configToml.toml());
+    }
+
     private static String getConfigTomlContent(String moduleName,
             BLangPackage bLangPackage) {
         BIRNode.BIRPackage birPackage = bLangPackage.symbol.bir;
+        PackageID currentPkgId = bLangPackage.symbol.pkgID;
         //bLangPackage.getImports().get(0).symbol.bir.globalVars
         StringBuilder content = new StringBuilder();
         boolean moduleInfoAdded = false;
@@ -61,11 +82,13 @@ public class ConfigTomlBuilder {
         //bLangPackage.getImports().get(0).symbol.bir.globalVars - Not working
         for (Scope.ScopeEntry entry : bLangPackage.getImports().get(0).symbol.scope.entries.values()) {
             BSymbol symbol = entry.symbol;
-
-            //Getting annotations. --> symbol.annots
-            if (symbol != null && symbol.tag == SymTag.VARIABLE && Symbols.isFlagOn(symbol.flags, Flags.CONFIGURABLE)) {
-                System.out.println("get import symbols");
-                System.out.println(((BVarSymbol) symbol).name.value);
+            //Check package name and org name to see that they are the same
+            if(!currentPkgId.getName().getValue().equals(symbol.pkgID.getName().getValue())) {
+                //Getting annotations. --> symbol.annots
+                if (symbol != null && symbol.tag == SymTag.VARIABLE && Symbols.isFlagOn(symbol.flags, Flags.CONFIGURABLE)) {
+                    System.out.println("get import symbols");
+                    System.out.println(((BVarSymbol) symbol).name.value);
+                }
             }
         }
         return String.valueOf(content);

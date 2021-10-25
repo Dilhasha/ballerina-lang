@@ -17,8 +17,12 @@
  */
 package io.ballerina.projects;
 
+import io.ballerina.projects.configurations.ConfigSchemaBuilder;
 import io.ballerina.projects.internal.DependencyManifestBuilder;
 import io.ballerina.projects.util.ProjectConstants;
+import io.ballerina.toml.semantic.ast.TomlTableNode;
+import io.ballerina.toml.validator.TomlValidator;
+import io.ballerina.toml.validator.schema.Schema;
 import io.ballerina.tools.diagnostics.Diagnostic;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -33,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static io.ballerina.projects.BallerinaTomlTests.getPackageManifest;
+import static io.ballerina.projects.util.ProjectConstants.CONFIGURATION_TOML;
 
 /**
  * Test DependenciesToml.
@@ -43,6 +48,88 @@ public class DependenciesTomlTests {
     private static final Path DEPENDENCIES_TOML_REPO = RESOURCE_DIRECTORY.resolve("dependencies-toml");
     static final PrintStream OUT = System.out;
 
+    @Test
+    public void generateSchema() {
+        ConfigSchemaBuilder.getConfigSchemaContent();
+    }
+    
+    @Test(enabled = false)
+    public void validateToml(){
+        TomlDocument configToml = TomlDocument.from(CONFIGURATION_TOML, "[mymock.foo]\n" +
+                "myVal = \"hello\"\nnewVal = 4.6");
+        TomlValidator ballerinaTomlValidator;
+
+            ballerinaTomlValidator = new TomlValidator(
+                    Schema.from("{\n" +
+                            "  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n" +
+                            "  \"title\": \"Config Toml Spec\",\n" +
+                            "  \"description\": \"Schema for Config Toml\",\n" +
+                            "  \"type\": \"object\",\n" +
+                            "  \"additionalProperties\": true,\n" +
+                            "  \"properties\": {\n" +
+                            "    \"mymock\": {\n" +
+                            "      \"type\": \"object\",\n" +
+                            "      \"additionalProperties\": true,\n" +
+                            "      \"properties\": {\n" +
+                            "        \"foo\": {\n" +
+                            "          \"type\": \"object\",\n" +
+                            "          \"additionalProperties\": true,\n" +
+                            "          \"properties\": {\n" +
+                            "            \"testMode\": {\n" +
+                            "              \"type\": \"boolean\",\n" +
+                            "              \"message\": {\n" +
+                            "                \"pattern\": \"invalid value for 'testMode' under [mymock.foo]: 'testMode' can only contain boolean\"\n" +
+                            "              }\n" +
+                            "            },\n" +
+                            "            \"clientURL\": {\n" +
+                            "              \"type\": \"string\",\n" +
+                            "              \"message\": {\n" +
+                            "                \"pattern\": \"invalid value for 'clientURL' under [mymock.foo]: 'clientURL' can only contain string values\"\n" +
+                            "              }\n" +
+                            "            },\n" +
+                            "            \"myVal\": {\n" +
+                            "              \"type\": \"string\",\n" +
+                            "              \"message\": {\n" +
+                            "                \"pattern\": \"invalid value for 'myVal' under [mymock.foo]: 'myVal' can only contain string values\"\n" +
+                            "              }\n" +
+                            "            },\n" +
+                            "            \"newVal\": {\n" +
+                            "              \"type\": \"integer\",\n" +
+                            "              \"message\": {\n" +
+                            "                \"pattern\": \"invalid value for 'myVal' under [mymock.foo]: 'newVal' can only contain integer values\"\n" +
+                            "              }\n" +
+                            "            }\n" +
+                            "          },\n" +
+                            "          \"required\": [\n" +
+                            "            \"myVal\", \"newVal\"\n" +
+                            "          ],\n" +
+                            "          \"message\": {\n" +
+                            "            \"required\": \"cannot find '${property}' under 'mymock.foo'\"\n" +
+                            "          }\n" +
+                            "        }\n" +
+                            "      },\n" +
+                            "      \"required\": [\n" +
+                            "        \"foo\"\n" +
+                            "      ],\n" +
+                            "      \"message\": {\n" +
+                            "        \"required\": \"cannot find '${property}' under 'mymock'\"\n" +
+                            "      }\n" +
+                            "    }\n" +
+                            "  }\n" +
+                            "}\n"));
+
+        // Validate ballerinaToml using ballerina toml schema
+        ballerinaTomlValidator.validate(configToml.toml());
+        TomlTableNode tomlAstNode = configToml.toml().rootNode();
+        if(!tomlAstNode.diagnostics().isEmpty()) {
+            String errorMsg = "";
+            for (Diagnostic diagnostic : tomlAstNode.diagnostics()){
+                errorMsg = errorMsg.concat(diagnostic.message() + "\n");
+            }
+            Assert.fail(errorMsg);
+        }
+
+    }
 
     @Test
     public void testValidDependenciesToml() throws IOException {
