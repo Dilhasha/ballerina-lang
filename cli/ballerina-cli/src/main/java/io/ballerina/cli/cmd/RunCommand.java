@@ -86,7 +86,7 @@ public class RunCommand implements BLauncherCmd {
             "when run is used with a source file or a module.")
     private Boolean observabilityIncluded;
 
-    @CommandLine.Option(names = "--dump-run-time", description = "calculate and dump build time")
+    @CommandLine.Option(names = "--dump-build-time", description = "calculate and dump build time")
     private Boolean dumpRunTime;
 
     @CommandLine.Option(names = "--dump-graph", hidden = true)
@@ -255,13 +255,13 @@ public class RunCommand implements BLauncherCmd {
 
     private BuildOptions constructBuildOptions() {
         return BuildOptions.builder()
-                .codeCoverage(false)
-                .experimental(experimentalFlag)
-                .offline(offline)
-                .skipTests(true)
-                .testReport(false)
-                .observabilityIncluded(observabilityIncluded)
-                .dumpBuildTime(dumpRunTime)
+                .setCodeCoverage(false)
+                .setExperimental(experimentalFlag)
+                .setOffline(offline)
+                .setSkipTests(true)
+                .setTestReport(false)
+                .setObservabilityIncluded(observabilityIncluded)
+                .setDumpBuildTime(dumpRunTime)
                 .setDumpGraph(dumpGraph)
                 .setDumpRawGraphs(dumpRawGraphs)
                 .setConfigSchemaGen(configSchemaGen)
