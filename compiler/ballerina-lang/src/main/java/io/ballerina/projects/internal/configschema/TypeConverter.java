@@ -172,6 +172,8 @@ public class TypeConverter {
         if (!requiredFields.isEmpty()) {
             typeNode.add("required", requiredFields);
         }
+        // Set the type name
+        typeNode.addProperty("name", effectiveType.mutableType.toString().trim());
         return typeNode;
     }
 
