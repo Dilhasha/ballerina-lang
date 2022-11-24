@@ -55,6 +55,7 @@ import io.ballerina.projects.directory.BuildProject;
 import io.ballerina.projects.environment.Environment;
 import io.ballerina.projects.environment.EnvironmentBuilder;
 import io.ballerina.projects.internal.model.BuildJson;
+import io.ballerina.projects.util.FileUtils;
 import io.ballerina.projects.util.ProjectConstants;
 import io.ballerina.projects.util.ProjectUtils;
 import io.ballerina.toml.semantic.ast.TomlTableArrayNode;
@@ -132,6 +133,8 @@ public class TestBuildProject extends BaseTest {
         Assert.assertTrue(ballerinaTomlOptional.isPresent());
 
         // TODO find an easy way to test the project structure. e.g. serialize the structure in a json file.
+
+
         int noOfSrcDocuments = 0;
         int noOfTestDocuments = 0;
         final Collection<ModuleId> moduleIds = currentPackage.moduleIds();
@@ -149,7 +152,7 @@ public class TestBuildProject extends BaseTest {
             }
         }
 
-        Assert.assertEquals(noOfSrcDocuments, 4);
+        Assert.assertEquals(noOfSrcDocuments, 9);
         Assert.assertEquals(noOfTestDocuments, 3);
 
     }
@@ -215,9 +218,7 @@ public class TestBuildProject extends BaseTest {
         if (isWindows()) {
             throw new SkipException("Skipping tests on Windows");
         }
-
         Path projectPath = RESOURCE_DIRECTORY.resolve("project_no_permission");
-
         // 1) Remove write permission
         boolean writable = projectPath.toFile().setWritable(false, true);
         if (!writable) {
@@ -231,6 +232,7 @@ public class TestBuildProject extends BaseTest {
         } catch (Exception e) {
             Assert.fail(e.getMessage());
         }
+
         // 3) Load the package
         Package currentPackage = project.currentPackage();
         Collection<ResolvedPackageDependency> resolvedPackageDependencies
