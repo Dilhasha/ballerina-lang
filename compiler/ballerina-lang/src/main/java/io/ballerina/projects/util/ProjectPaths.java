@@ -312,8 +312,11 @@ public class ProjectPaths {
     }
 
     static boolean isDefaultModuleSrcFile(Path filePath) {
-        Path absFilePath = filePath.toAbsolutePath().normalize();
-        return hasBallerinaToml(Optional.of(absFilePath.getParent()).get());
+        Path parentPath = Optional.of(filePath.toAbsolutePath().normalize().getParent()).get();
+        if (parentPath.toFile().getName().equals(ProjectConstants.GENERATED_MODULES_ROOT)) {
+            parentPath = Optional.of(parentPath.getParent()).get();
+        }
+        return hasBallerinaToml(Optional.of(parentPath).get());
     }
 
     static boolean isDefaultModuleTestFile(Path filePath) {
@@ -329,9 +332,11 @@ public class ProjectPaths {
 
     static boolean isNonDefaultModuleSrcFile(Path filePath) {
         Path absFilePath = filePath.toAbsolutePath().normalize();
+        // modulesRoot is equivalent to generatedSourcesRoot
         Path modulesRoot = Optional.of(Optional.of(absFilePath.getParent()).get().getParent()).get();
         Path projectRoot = modulesRoot.getParent();
-        return ProjectConstants.MODULES_ROOT.equals(modulesRoot.toFile().getName())
+        return (ProjectConstants.MODULES_ROOT.equals(modulesRoot.toFile().getName()) ||
+                ProjectConstants.GENERATED_MODULES_ROOT.equals(modulesRoot.toFile().getName()))
                 && hasBallerinaToml(projectRoot);
     }
 

@@ -32,6 +32,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -67,7 +68,7 @@ public class ProjectFiles {
     public static PackageData loadBuildProjectPackageData(Path packageDirPath) {
         ModuleData defaultModule = loadModule(packageDirPath);
         List<ModuleData> otherModules = loadOtherModules(packageDirPath);
-
+        otherModules.addAll(loadNewGeneratedModules(packageDirPath));
         DocumentData ballerinaToml = loadDocument(packageDirPath.resolve(ProjectConstants.BALLERINA_TOML));
         DocumentData dependenciesToml = loadDocument(packageDirPath.resolve(ProjectConstants.DEPENDENCIES_TOML));
         DocumentData cloudToml = loadDocument(packageDirPath.resolve(ProjectConstants.CLOUD_TOML));
@@ -76,6 +77,39 @@ public class ProjectFiles {
 
         return PackageData.from(packageDirPath, defaultModule, otherModules,
                 ballerinaToml, dependenciesToml, cloudToml, compilerPluginToml, packageMd);
+    }
+
+    private static Collection<? extends ModuleData> loadNewGeneratedModules(Path packageDirPath) {
+        Path generatedSourceRoot = packageDirPath.resolve(ProjectConstants.GENERATED_MODULES_ROOT);
+        if (generatedSourceRoot.toFile().exists()) {
+            try (Stream<Path> pathStream = Files.walk(generatedSourceRoot, 1)) {
+                return pathStream
+                        .filter(path -> isNewModule(packageDirPath, path))
+                        .filter(Files::isDirectory)
+                        .filter(path -> {
+                            // validate moduleName
+                            if (!ProjectUtils.validateModuleName(path.toFile().getName())) {
+                                throw new ProjectException("Invalid module name : '" + path.getFileName() + "' :\n" +
+                                        "Module name can only contain alphanumerics, underscores and periods");
+                            }
+                            if (!ProjectUtils.validateNameLength(path.toFile().getName())) {
+                                throw new ProjectException("Invalid module name : '" + path.getFileName() + "' :\n" +
+                                        "Maximum length of module name is 256 characters");
+                            }
+                            return true;
+                        })
+                        .map(ProjectFiles::loadModule)
+                        .collect(Collectors.toList());
+            } catch (IOException e) {
+                throw new ProjectException(e);
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    private static boolean isNewModule(Path packageDirPath, Path path) {
+        String dirName = path.toFile().getName();
+        return !Files.exists(packageDirPath.resolve(ProjectConstants.MODULES_ROOT).resolve(dirName));
     }
 
     private static List<ModuleData> loadOtherModules(Path packageDirPath) {
@@ -116,7 +150,19 @@ public class ProjectFiles {
         } else {
             testSrcDocs = Collections.emptyList();
         }
-
+        // If the module is not a newly generated module, explicitly load generated sources
+        if (!moduleDirPath.getParent().toFile().getName().equals(ProjectConstants.GENERATED_MODULES_ROOT)) {
+            Path generatedSourcesRoot = moduleDirPath.resolve(ProjectConstants.GENERATED_MODULES_ROOT);
+            if (moduleDirPath.getParent().toFile().getName().equals(ProjectConstants.MODULES_ROOT)) {
+                // generated sources root for non-default modules
+                generatedSourcesRoot = moduleDirPath.getParent().getParent().
+                        resolve(ProjectConstants.GENERATED_MODULES_ROOT).resolve(moduleDirPath.toFile().getName());
+            }
+            // Load generated sources if exists
+            if (Files.isDirectory(generatedSourcesRoot)) {
+                srcDocs.addAll(loadDocuments(generatedSourcesRoot));
+            }
+        }
         DocumentData moduleMd = loadDocument(moduleDirPath.resolve(ProjectConstants.MODULE_MD_FILE_NAME));
         List<Path> resources = loadResources(moduleDirPath);
         List<Path> testResources = loadResources(moduleDirPath.resolve(ProjectConstants.TEST_DIR_NAME));
