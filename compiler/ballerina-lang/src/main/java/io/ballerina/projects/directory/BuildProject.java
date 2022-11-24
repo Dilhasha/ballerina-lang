@@ -43,6 +43,7 @@ import io.ballerina.projects.internal.model.Dependency;
 import io.ballerina.projects.util.FileUtils;
 import io.ballerina.projects.util.ProjectConstants;
 import io.ballerina.projects.util.ProjectPaths;
+import io.ballerina.projects.util.ProjectUtils;
 import org.wso2.ballerinalang.util.RepoUtils;
 
 import java.io.IOException;
@@ -175,7 +176,7 @@ public class BuildProject extends Project {
     @Override
     public DocumentId documentId(Path file) {
         if (isFilePathInProject(file)) {
-            Path parent = Optional.of(file.toAbsolutePath().getParent()).get();
+            Path parent = ProjectUtils.getProjectRootOfBalSrcFile(file.toAbsolutePath());
             for (ModuleId moduleId : this.currentPackage().moduleIds()) {
                 String moduleDirName;
                 // Check for the module name contains a dot and not being the default module

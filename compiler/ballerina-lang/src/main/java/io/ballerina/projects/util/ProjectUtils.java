@@ -1168,4 +1168,44 @@ public class ProjectUtils {
         }
         return balaPath;
     }
+
+
+
+    public static boolean hasBallerinaToml(Path filePath) {
+        Path absFilePath = filePath.toAbsolutePath().normalize();
+        return absFilePath.resolve(BALLERINA_TOML).toFile().exists();
+    }
+
+    static boolean isNonDefaultModuleSrcFile(Path filePath) {
+        Path absFilePath = filePath.toAbsolutePath().normalize();
+        // modulesRoot is equivalent to generatedSourcesRoot
+        Path modulesRoot = Optional.of(Optional.of(absFilePath.getParent()).get().getParent()).get();
+        Path projectRoot = modulesRoot.getParent();
+        return (ProjectConstants.MODULES_ROOT.equals(modulesRoot.toFile().getName()) ||
+                ProjectConstants.GENERATED_MODULES_ROOT.equals(modulesRoot.toFile().getName()))
+                && hasBallerinaToml(projectRoot);
+    }
+
+    static boolean isNonDefaultModuleTestFile(Path filePath) {
+        Path absFilePath = filePath.toAbsolutePath().normalize();
+        Path testsRoot = Optional.of(absFilePath.getParent()).get();
+        if (!ProjectConstants.TEST_DIR_NAME.equals(testsRoot.toFile().getName())) {
+            return false;
+        }
+        Path modulesRoot = Optional.of(Optional.of(testsRoot.getParent()).get().getParent()).get();
+        Path projectRoot = modulesRoot.getParent();
+        return ProjectConstants.MODULES_ROOT.equals(modulesRoot.toFile().getName())
+                && hasBallerinaToml(projectRoot);
+    }
+
+    public static Path getProjectRootOfBalSrcFile(Path filePath) {
+        Path parentPath = Optional.of(filePath.toAbsolutePath().normalize().getParent()).get();
+        if (ProjectConstants.GENERATED_MODULES_ROOT.equals(parentPath.toFile().getName())) {
+            parentPath = Optional.of(parentPath.getParent()).get();
+        }
+        if (ProjectConstants.GENERATED_MODULES_ROOT.equals(Optional.of(parentPath.getParent()).get())) {
+            parentPath = Optional.of(Optional.of(parentPath.getParent()).get()).get();
+        }
+        return parentPath;
+    }
 }

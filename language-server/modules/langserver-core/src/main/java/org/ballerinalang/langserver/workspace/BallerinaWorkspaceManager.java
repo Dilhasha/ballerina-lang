@@ -69,6 +69,8 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,9 +87,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import static io.ballerina.projects.util.ProjectConstants.BALLERINA_TOML;
 
@@ -564,9 +563,15 @@ public class BallerinaWorkspaceManager implements WorkspaceManager {
                     // If inside a tests folder, get parent
                     parent = parent.getParent();
                 }
-                if (ProjectConstants.MODULES_ROOT.equals(parent.getParent().getFileName().toString())) {
-                    // If inside a module folder, get parent
+                if (ProjectConstants.MODULES_ROOT.equals(parent.getParent().getFileName().toString()) ||
+                        ProjectConstants.GENERATED_MODULES_ROOT.equals(parent.getParent().getFileName().toString())) {
+                    // If inside a modules folder or generated folder, get parent
                     parent = parent.getParent().getParent();
+                }
+                if (ProjectConstants.GENERATED_MODULES_ROOT.equals(
+                        parent.getParent().getParent().getFileName().toString())) {
+                    // If a generated source for a non-default module, get parent of parent
+                    parent = parent.getParent().getParent().getParent();
                 }
                 return projectPair(parent);
             }
@@ -595,8 +600,10 @@ public class BallerinaWorkspaceManager implements WorkspaceManager {
             return projectPair(filePath.getParent());
         } else if (isModuleChange) {
             Path projectRoot;
-            if (ProjectConstants.MODULES_ROOT.equals(filePath.getFileName().toString())) {
+            if (ProjectConstants.MODULES_ROOT.equals(filePath.getFileName().toString()) ||
+                    ProjectConstants.GENERATED_MODULES_ROOT.equals(filePath.getFileName().toString())) {
                 // If it is **/projectRoot/modules
+                // If it is **/projectRoot/generated
                 projectRoot = filePath.getParent();
             } else {
                 // If it is **/projectRoot/modules/mod2
