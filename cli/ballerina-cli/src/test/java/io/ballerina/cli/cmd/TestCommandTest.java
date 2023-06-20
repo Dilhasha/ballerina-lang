@@ -393,4 +393,17 @@ public class TestCommandTest extends BaseCommandTest {
             return FileVisitResult.CONTINUE;
         }
     }
+
+    @Test(description = "Test Graalvm incompatible ballerina project")
+    public void testGraalVMIncompatibleProject() throws IOException {
+        Path projectPath = this.testResources.resolve("validGraalvmCompatibleProject");
+        System.setProperty(ProjectConstants.USER_DIR, projectPath.toString());
+        TestCommand testCommand = new TestCommand(projectPath, printStream, printStream, false);
+        // non existing bal file
+        new CommandLine(testCommand).parseArgs("--graalvm");
+        testCommand.execute();
+        String buildLog = readOutput(true);
+        Assert.assertTrue(buildLog.contains("WARNING: Package is not compatible with GraalVM."));
+    }
+
 }
