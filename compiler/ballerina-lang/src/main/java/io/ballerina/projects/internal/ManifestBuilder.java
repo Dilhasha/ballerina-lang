@@ -214,6 +214,9 @@ public class ManifestBuilder {
         // Process local repo dependencies
         List<PackageManifest.Dependency> localRepoDependencies = getLocalRepoDependencies();
 
+        // Process local repo dependencies
+        List<PackageManifest.Tool> tools = getTools();
+
         // Compiler plugin descriptor
         CompilerPluginDescriptor pluginDescriptor = null;
         if (this.compilerPluginToml != null) {
@@ -222,7 +225,14 @@ public class ManifestBuilder {
 
         return PackageManifest.from(packageDescriptor, pluginDescriptor, platforms, localRepoDependencies, otherEntries,
                 diagnostics(), license, authors, keywords, exported, includes, repository, ballerinaVersion, visibility,
-                template, icon);
+                template, icon, tools);
+    }
+
+    private List<PackageManifest.Tool> getTools() {
+        PackageManifest.Tool tool = new PackageManifest.Tool("openapi", "generate-delivery-client", "test", "test", Collections.emptyMap());
+        List<PackageManifest.Tool> tools = new ArrayList<>();
+        tools.add(tool);
+        return tools;
     }
 
     private PackageDescriptor getPackageDescriptor(TomlTableNode tomlTableNode) {

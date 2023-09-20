@@ -276,6 +276,41 @@
         "required": "cannot find '${property}' under 'platform'"
       }
     },
+    "tool": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "filePath": {
+            "type": "string"
+          },
+          "targetModule": {
+            "type": "string"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "filePath",
+          "targetModule"
+        ]
+      }
+    },
     "dependency": {
       "type": "array",
       "items": {
