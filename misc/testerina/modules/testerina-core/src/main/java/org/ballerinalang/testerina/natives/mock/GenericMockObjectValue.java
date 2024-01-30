@@ -36,8 +36,10 @@ import io.ballerina.runtime.internal.values.ObjectValue;
 import io.ballerina.runtime.internal.values.TypedescValueImpl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -78,6 +80,29 @@ public class GenericMockObjectValue implements ObjectValue {
         throw ErrorCreator.createError(StringUtils.fromString("no cases registered for member function '" + funcName
                 + "' of object type '" + mockObj.getType().getName() + "'."));
     }
+
+    private static String replaceSymbolWithList(String str, List<Object> replacements) {
+        // TODO: handle when args list does not contain all required resource paths
+        Iterator<Object> iterator = replacements.iterator();
+        StringBuilder result = new StringBuilder(str);
+        int index = 0;
+        while (iterator.hasNext() && (index = result.indexOf("^", index)) != -1) {
+            result.replace(index, index + 1, iterator.next().toString());
+            index++;
+        }
+        return result.toString();
+    }
+
+    private static int getNumberOfPathParams(String str) {
+        int count = 0;
+        for (int i = 0; i < str.length(); i++) {
+            if (str.charAt(i) == '^') {
+                count += 1;
+            }
+        }
+        return count;
+    }
+
 
     @Override
     public Object get(BString fieldName) {
@@ -191,12 +216,17 @@ public class GenericMockObjectValue implements ObjectValue {
         // These should be removed before constructing case ids
         args = removeUnnecessaryArgs(args);
 
+        // Replace `^` with actual resource paths in function names
+        int numberOfPathParams = getNumberOfPathParams(funcName);
+        List<Object> argsList = Arrays.asList(args).subList(numberOfPathParams, args.length);
+        funcName = replaceSymbolWithList(funcName, Arrays.asList(args));
+
         // 1) add case for function without args
         caseId.append(mockObj.hashCode()).append("-").append(funcName);
         caseIdList.add(caseId.toString());
 
         // 2) add case for function with ANY specified for objects and records
-        for (Object arg : args) {
+        for (Object arg : argsList) {
             caseId.append("-");
             if (arg instanceof BObject || arg instanceof RecordType) {
                 caseId.append(MockRegistry.ANY);
@@ -209,7 +239,7 @@ public class GenericMockObjectValue implements ObjectValue {
         caseId.append(mockObj.hashCode()).append("-").append(funcName);
 
         // 3) add case for function with ANY specified for objects
-        for (Object arg : args) {
+        for (Object arg : argsList) {
             caseId.append("-");
             if (arg instanceof BObject) {
                 caseId.append(MockRegistry.ANY);

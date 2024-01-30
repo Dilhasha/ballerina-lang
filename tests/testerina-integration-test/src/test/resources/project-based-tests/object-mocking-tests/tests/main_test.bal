@@ -142,10 +142,10 @@ import ballerina/io;
 }
 function testMockResourceFunc() {
     clientEndpoint = test:mock(TestHttpClient:HttpClient);  
-    test:prepare(clientEndpoint).whenResource(":path2/mytest").onMethod("get").withArguments("dil").thenReturn("test dil");
-    test:prepare(clientEndpoint).when("post").withArguments("dil").thenReturn("test dil");
+    test:prepare(clientEndpoint).whenResource(":path2/mytest").onMethod("get").withPathParams({path2 : "news"}).withArguments("dil").thenReturn("test dil");
+    test:prepare(clientEndpoint).whenResource(":path1/test").onMethod("get").withPathParams({path1 : 2.5d}).withArguments(1).thenReturn("test dil");
 
     io:println(doGetResource());
     
-    test:assertEquals(doGetResource(), "ndn");
+    test:assertEquals(doGetResource(), "test dil");
 }

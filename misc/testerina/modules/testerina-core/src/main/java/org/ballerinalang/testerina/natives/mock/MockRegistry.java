@@ -23,6 +23,8 @@ import io.ballerina.runtime.api.values.BObject;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Singleton registry to hold cases registered for mocking.
@@ -94,7 +96,22 @@ public class MockRegistry {
      * @return return value
      */
     public Object getReturnValue(String caseId) {
-        return casesMap.get(caseId);
+        if (casesMap.containsKey(caseId)) {
+            return casesMap.get(caseId);
+        }
+        String str1 = maskSpecialCharacters(caseId);
+        String caseVal = "";
+        for (String caseKey : casesMap.keySet()) {
+            caseVal = maskSpecialCharacters(caseKey);
+            // Replace '&' in str1 with a regex pattern that matches any character except '#'
+            String regex = caseVal.replace("&", "[^#]*");
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(str1);
+            if (matcher.matches()) {
+                return casesMap.get(caseKey);
+            }
+        }
+        return null;
     }
 
     /**
@@ -104,8 +121,31 @@ public class MockRegistry {
      * @return whether the case exists
      */
     public boolean hasCase(String caseId) {
-        return casesMap.containsKey(caseId);
+        if (casesMap.containsKey(caseId)){
+            return true;
+        }
+        return matchResources(caseId);
     }
+
+    private boolean matchResources(String str1) {
+        str1 = maskSpecialCharacters(str1);
+        for (String caseVal : casesMap.keySet()) {
+            caseVal = maskSpecialCharacters(caseVal);
+            // Replace '&' in str1 with a regex pattern that matches any character except '#'
+            String regex = caseVal.replace("&", "[^#]*");
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(str1);
+            if (matcher.matches()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String maskSpecialCharacters(String str) {
+        return str.replace("$", "#").replace("^", "&");
+    }
+
 
     /**
      * Returns the map of function hits used when a sequence of return values is provided.

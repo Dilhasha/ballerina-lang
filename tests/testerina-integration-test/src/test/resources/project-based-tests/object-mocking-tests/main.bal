@@ -27,8 +27,9 @@ function doGet() returns string {
 }
 
 function doGetResource() returns string {
-    string result = clientEndpoint->/news/mytest;
-    result = clientEndpoint->post("sjsjkd");
+    string result = clientEndpoint->/news/mytest(name="dil");
+    string result2 = clientEndpoint->/[2.5]/test(name="dil");
+    // string result = clientEndpoint->post("sjsjkd");
     return result;
 }
 

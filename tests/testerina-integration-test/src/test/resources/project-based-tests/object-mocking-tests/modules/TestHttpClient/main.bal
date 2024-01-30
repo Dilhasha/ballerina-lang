@@ -41,6 +41,9 @@ public client class HttpClient {
         return "test " + name;
     }
 
+    resource function get [decimal path1]/test(string name="me") returns string {
+        return "test " + name;
+    }
         remote function post(string name="me") returns string {
         return "test " + name;
     }

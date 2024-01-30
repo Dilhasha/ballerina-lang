@@ -1,0 +1,3 @@
+org.ballerinalang.langserver.toml.ballerinatoml.completion.BallerinaTomlCompletionExtension
+org.ballerinalang.langserver.codeaction.CompilerPluginCodeActionExtension
+org.ballerinalang.langserver.completions.CompilerPluginCompletionExtension

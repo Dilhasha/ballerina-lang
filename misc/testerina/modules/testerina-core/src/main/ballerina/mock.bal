@@ -210,7 +210,7 @@ public class MemberResourceFunctionStub {
     object {} mockObject;
     string functionName = "";
     string accessor = "get";
-    map<string> pathParams = {};
+    map<string|int|boolean|float|decimal> pathParams = {};
     (anydata|error)[] args = [];
     any|error returnValue = ();
     any|error returnValueSeq = [];
@@ -231,7 +231,7 @@ public class MemberResourceFunctionStub {
         return self;
     }
 
-    public isolated function withPathParams(map<string> params) returns MemberResourceFunctionStub {
+    public isolated function withPathParams(map<string|int|boolean|float|decimal> params) returns MemberResourceFunctionStub {
         self.pathParams = params;
         error? result = validatePathParamsExt(self);
         if (result is error) {
