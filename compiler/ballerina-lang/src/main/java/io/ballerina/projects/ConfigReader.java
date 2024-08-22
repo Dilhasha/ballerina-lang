@@ -132,13 +132,19 @@ public class ConfigReader {
      */
     private static boolean isDirectDependency(Collection<ModuleDependency> moduleDependencies, String orgName,
                                               String packageName, String moduleName) {
-        return moduleDependencies.stream().anyMatch(dependency ->
-                dependency.descriptor().org().value().equals(orgName) &&
-                        dependency.descriptor().packageName().value().equals(packageName) &&
-                        (moduleName == null
-                                ? dependency.descriptor().name().moduleNamePart() == null
-                                : dependency.descriptor().name().moduleNamePart().equals(moduleName))
-        );
+        boolean isDirect = false;
+        for (ModuleDependency dependency : moduleDependencies) {
+            if (dependency.descriptor().org().value().equals(orgName) &&
+                    dependency.descriptor().packageName().value().equals(packageName)) {
+                String moduleNamePart = dependency.descriptor().name().moduleNamePart();
+                if ((moduleName == null && moduleNamePart == null) ||
+                        (moduleName != null && moduleName.equals(moduleNamePart))) {
+                    isDirect = true;
+                    break;
+                }
+            }
+        }
+        return isDirect;
     }
 
     private static String getDescriptionValue(MetadataNode metadataNode) {
@@ -348,7 +354,8 @@ public class ConfigReader {
             if (isSamePackage(packageInstance, moduleDependency)) {
                 for (Module mod : packageInstance.modules()) {
                     String modName = mod.descriptor().name().moduleNamePart();
-                    if (modName != null && modName.equals(
+                    String dependencyModNamePart = moduleDependency.descriptor().name().moduleNamePart();
+                    if (modName != null && dependencyModNamePart != null && modName.equals(
                             moduleDependency.descriptor().name().moduleNamePart())) {
                         getValidDependencies(packageInstance, mod, dependencies);
                     }
